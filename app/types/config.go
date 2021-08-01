@@ -76,8 +76,12 @@ func (c *Config) Validate() error {
 		if host.InitialDelay == "" {
 			c.Hosts[i].InitialDelay = c.InitialDelay
 		}
-		if len(host.SuccessCode) == 0 {
-			c.Hosts[i].SuccessCode = c.SuccessCode
+		if host.Success == nil {
+			c.Hosts[i].Success = &Success{
+				Code: c.SuccessCode,
+			}
+		} else if len(host.Success.Code) == 0 {
+			c.Hosts[i].Success.Code = c.SuccessCode
 		}
 
 		if host.SuccessThreshold == 0 {
@@ -106,7 +110,7 @@ func (c *Config) Validate() error {
 		c.Hosts[i].InitialDelayInterval = initialDelayInterval
 
 		log.Printf("[INFO] %s settings: InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
-			c.Hosts[i].String(), c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval, c.Hosts[i].TimeoutInterval, c.Hosts[i].SuccessCode, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold)
+			c.Hosts[i].String(), c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval, c.Hosts[i].TimeoutInterval, c.Hosts[i].Success.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold)
 	}
 
 	return nil

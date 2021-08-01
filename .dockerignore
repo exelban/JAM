@@ -1,6 +1,4 @@
 .idea
 .git
-.DS_Store
 config.yaml
-api.http
 mock_test.go

@@ -16,9 +16,11 @@ func TestMonitor_Run(t *testing.T) {
 		Config: &types.Config{
 			Hosts: []types.Host{
 				{
-					Name:                 "host-0",
-					URL:                  ts.URL,
-					SuccessCode:          []int{200},
+					Name: "host-0",
+					URL:  ts.URL,
+					Success: &types.Success{
+						Code: []int{200},
+					},
 					SuccessThreshold:     2,
 					FailureThreshold:     3,
 					InitialDelayInterval: time.Millisecond * 10,
@@ -120,4 +122,51 @@ func TestMonitor_History(t *testing.T) {
 	list := m.History()
 	require.Len(t, list["host-0"], 1)
 	require.Len(t, list["host-1"], 2)
+}
+
+func TestMonitor_Services(t *testing.T) {
+	t1 := time.Now().Add(-time.Minute)
+	t2 := time.Now().Add(time.Minute)
+
+	m := Monitor{
+		watchers: []*watcher{
+			{
+				lastCheck: t1,
+				host: types.Host{
+					Name: "host-0",
+				},
+				history: []s{
+					{
+						time:  time.Now(),
+						value: false,
+					},
+				},
+			},
+			{
+				host: types.Host{
+					Name: "host-1",
+				},
+				status:    types.UP,
+				lastCheck: t2,
+				history: []s{
+					{
+						time:  time.Now(),
+						value: false,
+					},
+					{
+						time:  time.Now().Add(-time.Minute),
+						value: true,
+					},
+				},
+			},
+		},
+	}
+
+	list := m.Services()
+
+	require.Equal(t, t1.Format("02.01.2006 15:04:05"), list["host-0"].LastCheck)
+	require.Equal(t, t2.Format("02.01.2006 15:04:05"), list["host-1"].LastCheck)
+
+	require.Len(t, list["host-0"].History, 1)
+	require.Len(t, list["host-1"].History, 2)
 }

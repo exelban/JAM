@@ -78,6 +78,31 @@ func (m *Monitor) History() map[string]map[time.Time]bool {
 	return list
 }
 
+// Services - return the services for the app
+func (m *Monitor) Services() map[string]types.Service {
+	list := make(map[string]types.Service)
+
+	m.mu.RLock()
+	for _, w := range m.watchers {
+		w.mu.RLock()
+		{
+			history := make(map[string]bool)
+			for _, p := range w.history {
+				history[p.time.Format("15:04:05 02.01.2006")] = p.value
+			}
+			list[w.host.String()] = types.Service{
+				Status:    w.status,
+				LastCheck: w.lastCheck.Format("02.01.2006 15:04:05"),
+				History:   history,
+			}
+		}
+		w.mu.RUnlock()
+	}
+	m.mu.RUnlock()
+
+	return list
+}
+
 // watch - hosts job with ticker. Runs the liveness check for host
 func (m *Monitor) watch(w *watcher) {
 	log.Printf("[INFO] %s: new watcher", w.host.String())

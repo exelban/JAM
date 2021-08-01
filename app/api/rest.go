@@ -6,6 +6,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/pkgz/rest"
+	"html/template"
+	"log"
 	"net/http"
 	"time"
 )
@@ -15,11 +17,17 @@ import (
 type monitor interface {
 	Status() map[string]types.StatusType
 	History() map[string]map[time.Time]bool
+	Services() map[string]types.Service
 }
 
 type Rest struct {
-	Monitor monitor
+	Monitor  monitor
+	Version  string
+	Live     bool
+	Template *template.Template
 }
+
+var indexPath = "app/index.html"
 
 func (s *Rest) Router() chi.Router {
 	router := chi.NewRouter()
@@ -42,6 +50,33 @@ func (s *Rest) Router() chi.Router {
 
 	router.Use(rest.Logger)
 	router.NotFound(rest.NotFound)
+
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		tmp := s.Template
+
+		if s.Live {
+			t, err := template.ParseFiles(indexPath)
+			if err != nil {
+				log.Printf("[ERROR] parse html %v", err)
+				rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, err.Error())
+				return
+			}
+			tmp = t
+		}
+
+		items := struct {
+			Version string
+			List    map[string]types.Service
+		}{
+			Version: s.Version,
+			List:    s.Monitor.Services(),
+		}
+
+		if err := tmp.Execute(w, items); err != nil {
+			log.Printf("[ERROR] render html %v", err)
+			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, err.Error())
+		}
+	})
 
 	router.Get("/status", func(w http.ResponseWriter, r *http.Request) {
 		rest.JsonResponse(w, s.Monitor.Status())

@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"github.com/exelban/cheks/app/types"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -20,7 +21,7 @@ func NewDialer(maxConn int) *Dialer {
 }
 
 // Dial - make a http request to the provided host
-func (d *Dialer) Dial(ctx context.Context, h *types.Host) (int, bool) {
+func (d *Dialer) Dial(ctx context.Context, h *types.Host) (int, []byte, bool) {
 	d.sem <- 1
 	defer func() {
 		<-d.sem
@@ -28,10 +29,12 @@ func (d *Dialer) Dial(ctx context.Context, h *types.Host) (int, bool) {
 
 	code := make(chan int, 1)
 	ok := make(chan bool, 1)
+	bytes := make(chan []byte, 1)
 	go func() {
 		req, err := http.NewRequest(h.Method, h.URL, nil)
 		if err != nil {
 			code <- 0
+			bytes <- []byte{}
 			ok <- false
 			log.Printf("[ERROR] prepare request %v", err)
 			return
@@ -44,14 +47,25 @@ func (d *Dialer) Dial(ctx context.Context, h *types.Host) (int, bool) {
 		resp, err := client.Do(req)
 		if err != nil {
 			code <- 0
+			bytes <- []byte{}
 			ok <- false
 			log.Printf("[ERROR] make request %v", err)
 			return
 		}
 
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			code <- 0
+			bytes <- []byte{}
+			ok <- false
+			log.Printf("[ERROR] read body %v", err)
+			return
+		}
+
 		code <- resp.StatusCode
+		bytes <- b
 		ok <- true
 	}()
 
-	return <-code, <-ok
+	return <-code, <-bytes, <-ok
 }

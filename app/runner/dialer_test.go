@@ -27,17 +27,19 @@ func TestDialer_Dial(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("wrong method", func(t *testing.T) {
-		code, ok := dialer.Dial(ctx, &types.Host{
+		code, b, ok := dialer.Dial(ctx, &types.Host{
 			Method: "?",
 		})
 		require.False(t, ok)
 		require.Equal(t, 0, code)
+		require.Empty(t, b)
 	})
 
 	t.Run("wrong url", func(t *testing.T) {
-		code, ok := dialer.Dial(ctx, &types.Host{})
+		code, b, ok := dialer.Dial(ctx, &types.Host{})
 		require.False(t, ok)
 		require.Equal(t, 0, code)
+		require.Empty(t, b)
 	})
 
 	t.Run("semaphore check", func(t *testing.T) {
@@ -47,12 +49,13 @@ func TestDialer_Dial(t *testing.T) {
 
 		for i := 0; i < 9; i++ {
 			go func() {
-				code, ok := dialer.Dial(ctx, &types.Host{
+				code, b, ok := dialer.Dial(ctx, &types.Host{
 					Method: "GET",
 					URL:    ts.URL,
 				})
 				require.True(t, ok)
 				require.Equal(t, http.StatusOK, code)
+				require.NotEmpty(t, b)
 				wg.Done()
 			}()
 		}
@@ -63,13 +66,14 @@ func TestDialer_Dial(t *testing.T) {
 	})
 
 	t.Run("check timeout", func(t *testing.T) {
-		code, ok := dialer.Dial(ctx, &types.Host{
+		code, b, ok := dialer.Dial(ctx, &types.Host{
 			Method:          "GET",
 			URL:             ts.URL,
 			TimeoutInterval: time.Millisecond * 5,
 		})
 		require.False(t, ok)
 		require.Equal(t, 0, code)
+		require.Empty(t, b)
 	})
 }
 

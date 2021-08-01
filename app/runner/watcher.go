@@ -9,16 +9,19 @@ import (
 )
 
 type s struct {
-	time  time.Time
-	value bool
+	time       time.Time
+	value      bool
+	statusCode int
+	body       []byte
 }
 
 type watcher struct {
 	dialer *Dialer
 
-	host    types.Host
-	status  types.StatusType
-	history []s
+	host      types.Host
+	status    types.StatusType
+	lastCheck time.Time
+	history   []s
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -30,18 +33,21 @@ func (w *watcher) check() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	responseCode, ok := w.dialer.Dial(w.ctx, &w.host)
+	responseCode, b, ok := w.dialer.Dial(w.ctx, &w.host)
 	if !ok {
 		return
 	}
-	status := w.host.ResponseCode(responseCode)
+	status := w.host.Status(responseCode, b)
+	w.lastCheck = time.Now()
 
 	if len(w.history) >= 100 {
 		w.history = w.history[1:len(w.history)]
 	}
 	w.history = append(w.history, s{
-		time:  time.Now(),
-		value: status,
+		time:       time.Now(),
+		value:      status,
+		statusCode: responseCode,
+		body:       b,
 	})
 
 	w.validate()

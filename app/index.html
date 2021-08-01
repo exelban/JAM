@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8">
+  <title>Cheks</title>
+
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width, height=device-height, viewport-fit=cover">
+  <meta name="description" content="Simple monitoring for APIs and servers"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #222222;
+      color: #ffffff;
+      font-family: "Roboto", sans-serif;
+      position: fixed;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      -webkit-overflow-scrolling: touch;
+      -webkit-text-size-adjust: none;
+      overflow-x: hidden;
+    }
+
+    p {
+      margin: 0;
+      padding: 0;
+    }
+
+    .unknown {
+      background: #dddddd;
+    }
+    .up {
+      background: #35ea0e;
+    }
+    .down {
+      background: #fc0000;
+    }
+
+    .container {
+      width: calc(100% - 20px);
+      height: auto;
+      padding: 10px;
+    }
+
+    .service {
+      width: calc(100% - 20px);
+      height: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #313131;
+      border-radius: 2px;
+      padding: 10px;
+      margin-top: 10px;
+      box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 3px, rgba(0, 0, 0, 0.24) 0px 1px 2px;
+    }
+
+    .service:first-child {
+      margin-top: 0;
+    }
+
+    .service:nth-child(2n) {
+      background: #383838;
+    }
+
+    .service > .row {
+      width: 100%;
+      height: 24px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .service > .row > .left {
+      width: auto;
+      height: auto;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .service > .row > .left > .status {
+      width: 12px;
+      height: 12px;
+      border-radius: 7px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .service > .row > .left > .name {
+      width: auto;
+      height: auto;
+      margin: 0 0 0 10px;
+      cursor: default;
+      font-size: 14px;
+    }
+
+    .service > .row > .detailsBtn {
+      width: auto;
+      height: auto;
+      background: #268072;
+      transition: background-color 0.1s;
+      color: #ffffff;
+      font-size: 13px;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      padding: 4px 12px;
+    }
+    .service > .row > .detailsBtn:hover {
+      background: #237567;
+      transition: background-color 0.2s;
+    }
+    .service > .row > .detailsBtn:active {
+      background: #206c5e;
+      transition: background-color 0.2s;
+    }
+
+    .service > input {
+      display: none;
+    }
+    .service > input:checked ~ .details {
+      height: 120px;
+      margin: 10px 0 0 0;
+      visibility: visible;
+      opacity: 1;
+      animation: draw 0.3s ease-in-out;
+      transition: all 0.3s;
+    }
+    .service > .details {
+      /*width: 100%;*/
+      /*height: 120px;*/
+      /*margin: 10px 0 0 0;*/
+      /*height: 0;*/
+      visibility: hidden;
+      opacity: 0;
+      margin: 0;
+      transition: all 0.2s;
+      background: #111111;
+      border-radius: 2px;
+    }
+
+    .chart {
+      width: 100%;
+      height: 100%;
+      display: table;
+      table-layout: fixed;
+      margin: 0;
+      padding: 0;
+    }
+    .chart li {
+      position: relative;
+      display: table-cell;
+      vertical-align: bottom;
+      height: 100%;
+    }
+    .chart span {
+      margin: 0 2px;
+      display: block;
+    }
+
+    @keyframes draw {
+      0% {
+        height: 0;
+      }
+    }
+
+    header {
+      width: calc(100% - 28px);
+      height: 30px;
+      background: #111111;
+      padding: 14px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header > p {
+      font-size: 18px;
+      font-weight: bold;
+      cursor: default;
+    }
+    header > p > a {
+      color: #969696;
+      font-size: 11px;
+      font-weight: normal;
+      text-decoration: none;
+    }
+    header > p > a:hover {
+      text-decoration: underline;
+    }
+
+    header > button {
+      width: auto;
+      height: 100%;
+      background: #80a12c;
+      color: #ffffff;
+      transition: background-color 0.1s;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      padding: 4px 12px;
+    }
+    header > button:hover {
+      background: #738f26;
+      transition: background-color 0.2s;
+    }
+    header > button:active {
+      background: #678022;
+      transition: background-color 0.2s;
+    }
+  </style>
+
+</head>
+<body>
+
+<header>
+  <p>Cheks <a href="https://github.com/exelban/cheks" target="_blank">{{.Version}}</a></p>
+</header>
+
+<main class="container">
+  {{ range $key, $value := .List }}
+  <div class="service">
+    <input type="checkbox" id="details-toggle-{{$key}}"/>
+    <div class="row">
+      <div class="left">
+        <i class="status {{ $value.Status }}" title="Actual status is: {{ $value.Status }}, last check was {{ $value.LastCheck }}"></i>
+        <p class="name">{{ $key }}</p>
+      </div>
+      <label for="details-toggle-{{$key}}" class="detailsBtn" title="Show details">Details</label>
+    </div>
+    <div class="details">
+      <ul class="chart">
+        {{ range $key, $value := $value.History }}
+        {{ if $value }}
+        <li><span class="up" style="height:100%" title="{{$key}} respond with status: {{$value}}"></span></li>
+        {{ else }}
+        <li><span class="down" style="height:50%" title="{{$key}} respond with status: {{$value}}"></span></li>
+        {{ end }}
+        {{ end }}
+      </ul>
+    </div>
+  </div>
+  {{ end }}
+</main>
+
+</body>
+</html>

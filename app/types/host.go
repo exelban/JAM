@@ -1,8 +1,14 @@
 package types
 
 import (
+	"bytes"
 	"time"
 )
+
+type Success struct {
+	Code []int   `json:"code" yaml:"code"`
+	Body *string `json:"body" yaml:"body"`
+}
 
 // Host - host structure
 type Host struct {
@@ -11,26 +17,31 @@ type Host struct {
 	Method string `json:"method" yaml:"method"`
 	URL    string `json:"url" yaml:"url"`
 
-	Retry            string `json:"retry" yaml:"retry"`
-	Timeout          string `json:"timeout" yaml:"timeout"`
-	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
-	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
-	SuccessCode      []int  `json:"successCode" yaml:"successCode"`
+	Retry            string   `json:"retry" yaml:"retry"`
+	Timeout          string   `json:"timeout" yaml:"timeout"`
+	InitialDelay     string   `json:"initialDelay" yaml:"initialDelay"`
+	SuccessThreshold int      `json:"successThreshold" yaml:"successThreshold"`
+	FailureThreshold int      `json:"failureThreshold" yaml:"failureThreshold"`
+	Success          *Success `json:"success" yaml:"success"`
 
 	RetryInterval        time.Duration `json:"-" yaml:"-"`
 	TimeoutInterval      time.Duration `json:"-" yaml:"-"`
 	InitialDelayInterval time.Duration `json:"-" yaml:"-"`
 }
 
-// ResponseCode - checking if provided code present in the success code list
-func (h *Host) ResponseCode(code int) bool {
+// Status - checking if provided code present in the success code list and body is equal
+func (h *Host) Status(code int, b []byte) bool {
 	ok := false
-	for _, v := range h.SuccessCode {
+	for _, v := range h.Success.Code {
 		if v == code {
 			ok = true
 		}
 	}
+
+	if ok && h.Success.Body != nil {
+		ok = bytes.Compare([]byte(*h.Success.Body), b) == 0
+	}
+
 	return ok
 }
 

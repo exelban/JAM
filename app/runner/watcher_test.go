@@ -17,7 +17,9 @@ func TestWatcher_check(t *testing.T) {
 			URL:              ts.URL,
 			SuccessThreshold: 2,
 			FailureThreshold: 3,
-			SuccessCode:      []int{200},
+			Success: &types.Success{
+				Code: []int{200},
+			},
 		},
 		ctx: context.Background(),
 	}

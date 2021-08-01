@@ -140,6 +140,6 @@ func TestConfig_Validate(t *testing.T) {
 			},
 		}
 		require.NoError(t, cfg.Validate())
-		require.Equal(t, []int{200}, cfg.Hosts[0].SuccessCode)
+		require.Equal(t, []int{200}, cfg.Hosts[0].Success.Code)
 	})
 }

@@ -2,18 +2,21 @@ package main
 
 import (
 	"context"
+	"embed"
 	"github.com/exelban/cheks/app/api"
 	"github.com/exelban/cheks/app/runner"
 	"github.com/exelban/cheks/app/types"
 	"github.com/pkg/errors"
 	"github.com/pkgz/rest"
 	"github.com/pkgz/service"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
 )
 
 type args struct {
+	Live       bool   `long:"live" env:"LIVE" description:"live preview of index.html"`
 	ConfigPath string `long:"config" env:"CONFIG" default:"./config.yaml" description:"path to the configuration file"`
 
 	MaxConn int    `long:"max-conn" env:"MAX_CONN" default:"32" description:"maximum parallel request"`
@@ -36,6 +39,11 @@ type app struct {
 
 	srv *rest.Server
 }
+
+//go:embed index.html
+var indexHTML embed.FS
+
+const version = "v0.0.0"
 
 func main() {
 	var args args
@@ -115,12 +123,20 @@ func New(args args) (*app, error) {
 		Dialer: runner.NewDialer(args.MaxConn),
 	}
 
+	indexHTMLTemplate, err := template.ParseFS(indexHTML, "index.html")
+	if err != nil {
+		return nil, errors.Wrap(err, "parse index.html")
+	}
+
 	return &app{
 		args: args,
 
 		monitor: monitor,
 		api: &api.Rest{
-			Monitor: monitor,
+			Monitor:  monitor,
+			Version:  version,
+			Live:     args.Live,
+			Template: indexHTMLTemplate,
 		},
 
 		srv: &rest.Server{
