@@ -69,7 +69,9 @@ func TestConfig_Validate(t *testing.T) {
 				Retry:        "",
 				Timeout:      "1s",
 				InitialDelay: "0s",
-				SuccessCode:  []int{200},
+				Success: &Success{
+					Code: []int{200},
+				},
 				Hosts: []Host{
 					{
 						Name: "test",
@@ -78,7 +80,6 @@ func TestConfig_Validate(t *testing.T) {
 				},
 			}
 
-			require.Error(t, cfg.Validate())
 			cfg.Retry = "123s"
 			require.NoError(t, cfg.Validate())
 			require.Equal(t, "123s", cfg.Hosts[0].Retry)
@@ -88,7 +89,9 @@ func TestConfig_Validate(t *testing.T) {
 			cfg := &Config{
 				Retry:        "1s",
 				InitialDelay: "0s",
-				SuccessCode:  []int{200},
+				Success: &Success{
+					Code: []int{200},
+				},
 				Hosts: []Host{
 					{
 						Name: "test",
@@ -97,7 +100,6 @@ func TestConfig_Validate(t *testing.T) {
 				},
 			}
 
-			require.Error(t, cfg.Validate())
 			cfg.Timeout = "123s"
 			require.NoError(t, cfg.Validate())
 			require.Equal(t, "123s", cfg.Hosts[0].Timeout)
@@ -108,7 +110,9 @@ func TestConfig_Validate(t *testing.T) {
 				Retry:        "1s",
 				Timeout:      "1s",
 				InitialDelay: "0s",
-				SuccessCode:  []int{200},
+				Success: &Success{
+					Code: []int{200},
+				},
 				Hosts: []Host{
 					{
 						Name:         "test",
@@ -132,7 +136,9 @@ func TestConfig_Validate(t *testing.T) {
 			Retry:        "1s",
 			Timeout:      "1s",
 			InitialDelay: "0s",
-			SuccessCode:  []int{200},
+			Success: &Success{
+				Code: []int{200},
+			},
 			Hosts: []Host{
 				{
 					URL: "ok",

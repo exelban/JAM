@@ -16,12 +16,13 @@ import (
 type Config struct {
 	MaxConn int `json:"maxConn" yaml:"maxConn"`
 
-	Retry            string `json:"retry" yaml:"retry"`
-	Timeout          string `json:"timeout" yaml:"timeout"`
-	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
-	SuccessCode      []int  `json:"successCode" yaml:"successCode"`
-	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
+	Retry            string         `json:"retry" yaml:"retry"`
+	Timeout          string         `json:"timeout" yaml:"timeout"`
+	InitialDelay     string         `json:"initialDelay" yaml:"initialDelay"`
+	SuccessThreshold int            `json:"successThreshold" yaml:"successThreshold"`
+	FailureThreshold int            `json:"failureThreshold" yaml:"failureThreshold"`
+	Success          *Success       `json:"success" yaml:"success"`
+	History          *HistoryCounts `json:"history" yaml:"history"`
 
 	Hosts []Host `json:"hosts" yaml:"hosts"`
 }
@@ -62,6 +63,46 @@ func (c *Config) Validate() error {
 		return ErrNoHosts
 	}
 
+	if c.MaxConn == 0 {
+		c.MaxConn = 128
+	}
+	if c.Retry == "" {
+		c.Retry = "60s"
+	}
+	if c.Timeout == "" {
+		c.Timeout = "180s"
+	}
+	if c.InitialDelay == "" {
+		c.InitialDelay = "0"
+	}
+	if c.Success == nil {
+		c.Success = &Success{
+			Code: []int{200, 201, 202, 203, 204, 205, 206, 207, 208},
+		}
+	} else if len(c.Success.Code) == 0 {
+		c.Success.Code = []int{200, 201, 202, 203, 204, 205, 206, 207, 208}
+	}
+	if c.SuccessThreshold == 0 {
+		c.SuccessThreshold = 2
+	}
+	if c.FailureThreshold == 0 {
+		c.FailureThreshold = 3
+	}
+
+	if c.History == nil {
+		c.History = &HistoryCounts{
+			Check:   180,
+			Success: 30,
+			Failure: 30,
+		}
+	} else if c.History.Check == 0 {
+		c.History.Check = 180
+	} else if c.History.Success == 0 {
+		c.History.Success = 30
+	} else if c.History.Failure == 0 {
+		c.History.Failure = 30
+	}
+
 	for i, host := range c.Hosts {
 		if host.URL == "" {
 			return fmt.Errorf("no url for %s", host.Name)
@@ -77,11 +118,9 @@ func (c *Config) Validate() error {
 			c.Hosts[i].InitialDelay = c.InitialDelay
 		}
 		if host.Success == nil {
-			c.Hosts[i].Success = &Success{
-				Code: c.SuccessCode,
-			}
+			c.Hosts[i].Success = c.Success
 		} else if len(host.Success.Code) == 0 {
-			c.Hosts[i].Success.Code = c.SuccessCode
+			c.Hosts[i].Success.Code = c.Success.Code
 		}
 
 		if host.SuccessThreshold == 0 {
@@ -108,6 +147,16 @@ func (c *Config) Validate() error {
 			return errors.Wrap(err, "initial delay interval")
 		}
 		c.Hosts[i].InitialDelayInterval = initialDelayInterval
+
+		if host.History == nil {
+			c.Hosts[i].History = c.History
+		} else if host.History.Check == 0 {
+			c.Hosts[i].History.Check = c.History.Check
+		} else if host.History.Success == 0 {
+			c.Hosts[i].History.Success = c.History.Success
+		} else if host.History.Failure == 0 {
+			c.Hosts[i].History.Failure = c.History.Failure
+		}
 
 		log.Printf("[INFO] %s settings: InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
 			c.Hosts[i].String(), c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval, c.Hosts[i].TimeoutInterval, c.Hosts[i].Success.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold)

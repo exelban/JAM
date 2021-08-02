@@ -10,19 +10,27 @@ type Success struct {
 	Body *string `json:"body" yaml:"body"`
 }
 
+type HistoryCounts struct {
+	Check   int `json:"check" yaml:"check"`
+	Success int `json:"success" yaml:"success"`
+	Failure int `json:"failure" yaml:"failure"`
+}
+
 // Host - host structure
 type Host struct {
-	Name string `json:"name" yaml:"name"`
+	Name string   `json:"name" yaml:"name"`
+	Tags []string `json:"tags" yaml:"tags"`
 
 	Method string `json:"method" yaml:"method"`
 	URL    string `json:"url" yaml:"url"`
 
-	Retry            string   `json:"retry" yaml:"retry"`
-	Timeout          string   `json:"timeout" yaml:"timeout"`
-	InitialDelay     string   `json:"initialDelay" yaml:"initialDelay"`
-	SuccessThreshold int      `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int      `json:"failureThreshold" yaml:"failureThreshold"`
-	Success          *Success `json:"success" yaml:"success"`
+	Retry            string         `json:"retry" yaml:"retry"`
+	Timeout          string         `json:"timeout" yaml:"timeout"`
+	InitialDelay     string         `json:"initialDelay" yaml:"initialDelay"`
+	SuccessThreshold int            `json:"successThreshold" yaml:"successThreshold"`
+	FailureThreshold int            `json:"failureThreshold" yaml:"failureThreshold"`
+	Success          *Success       `json:"success" yaml:"success"`
+	History          *HistoryCounts `json:"history" yaml:"history"`
 
 	RetryInterval        time.Duration `json:"-" yaml:"-"`
 	TimeoutInterval      time.Duration `json:"-" yaml:"-"`

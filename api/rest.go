@@ -16,7 +16,6 @@ import (
 
 type monitor interface {
 	Status() map[string]types.StatusType
-	History() map[string]map[time.Time]bool
 	Services() map[string]types.Service
 }
 
@@ -80,9 +79,6 @@ func (s *Rest) Router() chi.Router {
 
 	router.Get("/status", func(w http.ResponseWriter, r *http.Request) {
 		rest.JsonResponse(w, s.Monitor.Status())
-	})
-	router.Get("/history", func(w http.ResponseWriter, r *http.Request) {
-		rest.JsonResponse(w, s.Monitor.History())
 	})
 
 	return router

@@ -11,7 +11,6 @@ import (
 	"github.com/pkgz/service"
 	"html/template"
 	"log"
-	"net/http"
 	"os"
 )
 
@@ -19,14 +18,9 @@ type args struct {
 	Live       bool   `long:"live" env:"LIVE" description:"live preview of index.html"`
 	ConfigPath string `long:"config" env:"CONFIG" default:"./config.yaml" description:"path to the configuration file"`
 
-	MaxConn int    `long:"max-conn" env:"MAX_CONN" default:"32" description:"maximum parallel request"`
-	Retry   string `long:"retry" env:"RETRY" default:"30s" description:"default retry interval"`
-	Timeout string `long:"timeout" env:"TIMEOUT" default:"180s" description:"default request timeout"`
-
-	InitialDelay     string `long:"initial-delay" env:"INITIAL-DELAY" default:"0" description:"default initial delay"`
-	SuccessCode      []int  `long:"success-code" env:"SUCCESS-CODE" description:"default success codes"`
-	SuccessThreshold int    `long:"success-threshold" env:"SUCCESS-THRESHOLD" default:"2" description:"default success threshold"`
-	FailureThreshold int    `long:"failure-threshold" env:"FAILURE-THRESHOLD" default:"3" description:"default failure threshold"`
+	DashboardAuth     bool   `long:"dashboard-auth" env:"DASHBOARD_AUTH" description:"secure dashboard with credentials"`
+	DashboardUsername string `long:"dashboard-username" env:"DASHBOARD_USERNAME" default:"admin" description:"dashboard username"`
+	DashboardPassword string `long:"dashboard-password" env:"DASHBOARD_PASSWORD" description:"dashboard password"`
 
 	service.ARGS
 }
@@ -75,44 +69,8 @@ func New(args args) (*app, error) {
 		return nil, errors.Wrap(err, "parse config")
 	}
 
-	if cfg.MaxConn == 0 {
-		cfg.MaxConn = args.MaxConn
-	}
-	if cfg.Retry == "" {
-		cfg.Retry = args.Retry
-	}
-	if cfg.Timeout == "" {
-		cfg.Timeout = args.Timeout
-	}
-	if cfg.InitialDelay == "" {
-		cfg.InitialDelay = args.InitialDelay
-	}
-	if len(cfg.SuccessCode) == 0 {
-		cfg.SuccessCode = args.SuccessCode
-		if len(cfg.SuccessCode) == 0 {
-			cfg.SuccessCode = []int{
-				http.StatusOK,
-				http.StatusCreated,
-				http.StatusAccepted,
-				http.StatusNonAuthoritativeInfo,
-				http.StatusNoContent,
-				http.StatusResetContent,
-				http.StatusPartialContent,
-				http.StatusMultiStatus,
-				http.StatusAlreadyReported,
-				http.StatusIMUsed,
-			}
-		}
-	}
-	if cfg.SuccessThreshold == 0 {
-		cfg.SuccessThreshold = args.SuccessThreshold
-	}
-	if cfg.FailureThreshold == 0 {
-		cfg.FailureThreshold = args.FailureThreshold
-	}
-
-	log.Printf("[INFO] default settings: MaxConn=%d, Retry=%s, Timeout=%s, InitialDelay=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
-		cfg.MaxConn, cfg.Retry, cfg.Timeout, cfg.InitialDelay, cfg.SuccessCode, cfg.SuccessThreshold, cfg.FailureThreshold)
+	log.Printf("[INFO] default settings: MaxConn=%d, Retry=%s, Timeout=%s, InitialDelay=%s, Success=%+v, SuccessThreshold=%d, FailureThreshold=%d",
+		cfg.MaxConn, cfg.Retry, cfg.Timeout, cfg.InitialDelay, cfg.Success, cfg.SuccessThreshold, cfg.FailureThreshold)
 
 	if err := cfg.Validate(); err != nil {
 		return nil, errors.Wrap(err, "validate config")
@@ -120,7 +78,7 @@ func New(args args) (*app, error) {
 
 	monitor := &runner.Monitor{
 		Config: cfg,
-		Dialer: runner.NewDialer(args.MaxConn),
+		Dialer: runner.NewDialer(cfg.MaxConn),
 	}
 
 	indexHTMLTemplate, err := template.ParseFS(indexHTML, "index.html")

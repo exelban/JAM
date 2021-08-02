@@ -9,25 +9,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestRest_Status(t *testing.T) {
 	ts, shutdown := server()
 	defer shutdown()
 	uri := fmt.Sprintf("%s/status", ts.URL)
-
-	t.Run("no data", func(t *testing.T) {
-		resp, err := http.Get(uri)
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-	})
-}
-
-func TestRest_History(t *testing.T) {
-	ts, shutdown := server()
-	defer shutdown()
-	uri := fmt.Sprintf("%s/history", ts.URL)
 
 	t.Run("no data", func(t *testing.T) {
 		resp, err := http.Get(uri)
@@ -47,7 +34,7 @@ func TestRest_dashboard(t *testing.T) {
 		require.NotNil(t, resp)
 	})
 
-	t.Run("wrong list key", func(t *testing.T) {
+	t.Run("wrong List key", func(t *testing.T) {
 		file, _ := ioutil.TempFile("/tmp", "*.html")
 		defer func() {
 			_ = os.Remove(file.Name())
@@ -83,9 +70,6 @@ func TestRest_dashboard(t *testing.T) {
 func server() (*httptest.Server, func()) {
 	apiRest := &Rest{
 		Monitor: &monitorMock{
-			HistoryFunc: func() map[string]map[time.Time]bool {
-				return make(map[string]map[time.Time]bool)
-			},
 			StatusFunc: func() map[string]types.StatusType {
 				return make(map[string]types.StatusType)
 			},

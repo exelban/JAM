@@ -1,7 +1,15 @@
 package types
 
+import "time"
+
 type Service struct {
 	Status    StatusType
 	LastCheck string
-	History   map[string]bool
+	Checks    map[string]bool
+	Success   []time.Time
+	Failure   []time.Time
+	Tags      []struct {
+		Name  string
+		Color string
+	}
 }

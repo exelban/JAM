@@ -20,6 +20,9 @@ func TestWatcher_check(t *testing.T) {
 			Success: &types.Success{
 				Code: []int{200},
 			},
+			History: &types.HistoryCounts{
+				Check: 100,
+			},
 		},
 		ctx: context.Background(),
 	}
@@ -84,16 +87,16 @@ func TestWatcher_validate(t *testing.T) {
 		w.validate()
 		require.Equal(t, types.Unknown, w.status)
 
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: false,
 		})
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: true,
 		})
 		w.validate()
 		require.Equal(t, types.UP, w.status)
 
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: false,
 		})
 		w.validate()
@@ -109,33 +112,33 @@ func TestWatcher_validate(t *testing.T) {
 		}
 
 		for i := 0; i < 6; i++ {
-			w.history = append(w.history, s{
+			w.checks = append(w.checks, check{
 				value: false,
 			})
 			w.validate()
 		}
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: true,
 		})
 		w.validate()
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: true,
 		})
 		w.validate()
 		require.Equal(t, types.DOWN, w.status)
 
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: true,
 		})
 		w.validate()
 		require.Equal(t, types.UP, w.status)
 
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: false,
 		})
 		w.validate()
 		require.Equal(t, types.UP, w.status)
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: false,
 		})
 		w.validate()
@@ -151,27 +154,27 @@ func TestWatcher_validate(t *testing.T) {
 		}
 
 		for i := 0; i < 6; i++ {
-			w.history = append(w.history, s{
+			w.checks = append(w.checks, check{
 				value: true,
 			})
 			w.validate()
 		}
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: false,
 		})
 		w.validate()
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: false,
 		})
 		w.validate()
 		require.Equal(t, types.UP, w.status)
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: false,
 		})
 		w.validate()
 		require.Equal(t, types.DOWN, w.status)
 
-		w.history = append(w.history, s{
+		w.checks = append(w.checks, check{
 			value: true,
 		})
 		w.validate()
