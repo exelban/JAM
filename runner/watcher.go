@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/app/types"
+	"github.com/exelban/cheks/types"
 	"log"
 	"sync"
 	"time"
@@ -40,7 +40,7 @@ func (w *watcher) check() {
 	status := w.host.Status(responseCode, b)
 	w.lastCheck = time.Now()
 
-	if len(w.history) >= 100 {
+	if len(w.history) >= historyCount {
 		w.history = w.history[1:len(w.history)]
 	}
 	w.history = append(w.history, s{

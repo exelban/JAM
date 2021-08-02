@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"embed"
-	"github.com/exelban/cheks/app/api"
-	"github.com/exelban/cheks/app/runner"
-	"github.com/exelban/cheks/app/types"
+	"github.com/exelban/cheks/api"
+	"github.com/exelban/cheks/runner"
+	"github.com/exelban/cheks/types"
 	"github.com/pkg/errors"
 	"github.com/pkgz/rest"
 	"github.com/pkgz/service"

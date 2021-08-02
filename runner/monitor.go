@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/app/types"
+	"github.com/exelban/cheks/types"
 	"log"
 	"sync"
 	"time"
@@ -16,6 +16,8 @@ type Monitor struct {
 	watchers []*watcher
 	mu       sync.RWMutex
 }
+
+var historyCount = 100
 
 // Run - run the monitor. Creates a jobs for each host in the separate threads
 func (m *Monitor) Run(ctx context.Context) error {

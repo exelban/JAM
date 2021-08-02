@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"github.com/exelban/cheks/app/types"
+	"github.com/exelban/cheks/types"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"

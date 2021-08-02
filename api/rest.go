@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/exelban/cheks/app/types"
+	"github.com/exelban/cheks/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -27,7 +27,7 @@ type Rest struct {
 	Template *template.Template
 }
 
-var indexPath = "app/index.html"
+var indexPath = "index.html"
 
 func (s *Rest) Router() chi.Router {
 	router := chi.NewRouter()

@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/app/types"
+	"github.com/exelban/cheks/types"
 	"io/ioutil"
 	"log"
 	"net/http"
