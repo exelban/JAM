@@ -6,7 +6,7 @@ COPY go.sum .
 RUN go mod download
 
 COPY . .
-RUN go build -o ./bin/main ./app/main.go
+RUN go build -o ./bin/main ./main.go
 
 
 FROM exelban/baseimage:alpine-latest

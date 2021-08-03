@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"github.com/exelban/cheks/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -19,11 +20,18 @@ type monitor interface {
 	Services() map[string]types.Service
 }
 
+type Auth struct {
+	Enabled  bool
+	Username string
+	Password string
+}
+
 type Rest struct {
 	Monitor  monitor
 	Version  string
 	Live     bool
 	Template *template.Template
+	Auth     Auth
 }
 
 var indexPath = "index.html"
@@ -50,9 +58,8 @@ func (s *Rest) Router() chi.Router {
 	router.Use(rest.Logger)
 	router.NotFound(rest.NotFound)
 
-	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		tmp := s.Template
-
+	router.With(s.basicAuth).Get("/", func(w http.ResponseWriter, r *http.Request) {
+		tmpl := s.Template
 		if s.Live {
 			t, err := template.ParseFiles(indexPath)
 			if err != nil {
@@ -60,7 +67,7 @@ func (s *Rest) Router() chi.Router {
 				rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, err.Error())
 				return
 			}
-			tmp = t
+			tmpl = t
 		}
 
 		items := struct {
@@ -71,15 +78,33 @@ func (s *Rest) Router() chi.Router {
 			List:    s.Monitor.Services(),
 		}
 
-		if err := tmp.Execute(w, items); err != nil {
+		if err := tmpl.Execute(w, items); err != nil {
 			log.Printf("[ERROR] render html %v", err)
 			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, err.Error())
 		}
 	})
 
-	router.Get("/status", func(w http.ResponseWriter, r *http.Request) {
+	router.With(s.basicAuth).Get("/status", func(w http.ResponseWriter, r *http.Request) {
 		rest.JsonResponse(w, s.Monitor.Status())
 	})
 
 	return router
+}
+
+func (s *Rest) basicAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.Auth.Enabled {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		username, password, ok := r.BasicAuth()
+		if !ok || username != s.Auth.Username || subtle.ConstantTimeCompare([]byte(password), []byte(s.Auth.Password)) != 1 {
+			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+			rest.ErrorResponse(w, r, http.StatusUnauthorized, nil, "restricted")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
