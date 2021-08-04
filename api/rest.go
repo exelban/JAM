@@ -17,7 +17,7 @@ import (
 
 type monitor interface {
 	Status() map[string]types.StatusType
-	Services() map[string]types.Service
+	Services() []types.Service
 }
 
 type Auth struct {
@@ -72,7 +72,7 @@ func (s *Rest) Router() chi.Router {
 
 		items := struct {
 			Version string
-			List    map[string]types.Service
+			List    []types.Service
 		}{
 			Version: s.Version,
 			List:    s.Monitor.Services(),

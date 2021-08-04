@@ -71,8 +71,8 @@ func (m *Monitor) Status() map[string]types.StatusType {
 }
 
 // Services - return the services for the app
-func (m *Monitor) Services() map[string]types.Service {
-	list := make(map[string]types.Service)
+func (m *Monitor) Services() []types.Service {
+	list := []types.Service{}
 
 	m.mu.RLock()
 	for _, w := range m.watchers {
@@ -94,14 +94,15 @@ func (m *Monitor) Services() map[string]types.Service {
 				}{Name: tag, Color: m.tagsColors[tag]})
 			}
 
-			list[w.host.String()] = types.Service{
+			list = append(list, types.Service{
+				Name:      w.host.String(),
 				Status:    w.status,
 				LastCheck: w.lastCheck.Format("02.01.2006 15:04:05"),
 				Checks:    history,
 				Success:   w.success,
 				Failure:   w.failure,
 				Tags:      tags,
-			}
+			})
 		}
 		w.mu.RUnlock()
 	}

@@ -24,13 +24,15 @@ type Host struct {
 	Method string `json:"method" yaml:"method"`
 	URL    string `json:"url" yaml:"url"`
 
-	Retry            string         `json:"retry" yaml:"retry"`
-	Timeout          string         `json:"timeout" yaml:"timeout"`
-	InitialDelay     string         `json:"initialDelay" yaml:"initialDelay"`
-	SuccessThreshold int            `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int            `json:"failureThreshold" yaml:"failureThreshold"`
-	Success          *Success       `json:"success" yaml:"success"`
-	History          *HistoryCounts `json:"history" yaml:"history"`
+	Retry            string `json:"retry" yaml:"retry"`
+	Timeout          string `json:"timeout" yaml:"timeout"`
+	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
+	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
+	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
+
+	Success *Success          `json:"success" yaml:"success"`
+	History *HistoryCounts    `json:"history" yaml:"history"`
+	Headers map[string]string `json:"headers" yaml:"headers"`
 
 	RetryInterval        time.Duration `json:"-" yaml:"-"`
 	TimeoutInterval      time.Duration `json:"-" yaml:"-"`

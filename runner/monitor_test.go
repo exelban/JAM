@@ -100,7 +100,7 @@ func TestMonitor_Services(t *testing.T) {
 			{
 				lastCheck: t1,
 				host: types.Host{
-					Name: "host-0",
+					Name: "b",
 				},
 				checks: []check{
 					{
@@ -111,7 +111,7 @@ func TestMonitor_Services(t *testing.T) {
 			},
 			{
 				host: types.Host{
-					Name: "host-1",
+					Name: "a",
 				},
 				status:    types.UP,
 				lastCheck: t2,
@@ -131,9 +131,12 @@ func TestMonitor_Services(t *testing.T) {
 
 	list := m.Services()
 
-	require.Equal(t, t1.Format("02.01.2006 15:04:05"), list["host-0"].LastCheck)
-	require.Equal(t, t2.Format("02.01.2006 15:04:05"), list["host-1"].LastCheck)
+	require.Equal(t, "b", list[0].Name)
+	require.Equal(t, "a", list[1].Name)
 
-	require.Len(t, list["host-0"].Checks, 1)
-	require.Len(t, list["host-1"].Checks, 2)
+	require.Equal(t, t1.Format("02.01.2006 15:04:05"), list[0].LastCheck)
+	require.Equal(t, t2.Format("02.01.2006 15:04:05"), list[1].LastCheck)
+
+	require.Len(t, list[0].Checks, 1)
+	require.Len(t, list[1].Checks, 2)
 }

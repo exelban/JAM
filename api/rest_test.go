@@ -73,8 +73,8 @@ func server() (*httptest.Server, func()) {
 			StatusFunc: func() map[string]types.StatusType {
 				return make(map[string]types.StatusType)
 			},
-			ServicesFunc: func() map[string]types.Service {
-				return make(map[string]types.Service)
+			ServicesFunc: func() []types.Service {
+				return []types.Service{}
 			},
 		},
 		Live: true,

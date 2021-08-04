@@ -82,14 +82,13 @@
     }
 
     .service {
-      width: calc(100% - 20px);
+      width: 100%;
       height: auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       background: #313131;
       border-radius: 2px;
-      padding: 10px;
       margin-top: 10px;
       box-shadow: rgba(0, 0, 0, 0.12) 0 1px 3px, rgba(0, 0, 0, 0.24) 0 1px 2px;
     }
@@ -101,12 +100,15 @@
     }
 
     .service > .row {
-      width: 100%;
+      width: calc(100% - 20px);
       height: 24px;
+      padding: 10px;
       display: flex;
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
+      cursor: pointer;
+      pointer-events: initial;
     }
 
     .service > .row > .left {
@@ -127,7 +129,6 @@
       width: auto;
       height: auto;
       margin: 0 0 0 10px;
-      cursor: default;
       font-size: 14px;
     }
 
@@ -153,7 +154,8 @@
     }
     .service > input:checked ~ .details {
       height: 176px;
-      margin: 10px 0 0 0;
+      margin: 0;
+      padding: 0 10px 10px 10px;
       visibility: visible;
       opacity: 1;
       animation: draw 0.3s ease-in-out;
@@ -161,12 +163,19 @@
     }
     .service > input:checked ~ .details > .stats {
       height: 48px;
+      visibility: visible;
+      opacity: 1;
+      transition: all 0.3s;
     }
     .service > input:checked ~ .details > .stats > p {
       height: 16px;
+      visibility: visible;
+      opacity: 1;
+      transition: all 0.3s;
     }
+
     .service > .details {
-      width: 100%;
+      width: calc(100% - 20px);
       /*height: 176px;*/
       /*margin: 10px 0 0 0;*/
       height: 0;
@@ -175,6 +184,7 @@
       margin: 0;
       transition: all 0.2s;
       border-radius: 2px;
+      padding: 0;
     }
     .service > .details > .stats {
       width: calc(100% - 12px);
@@ -183,9 +193,15 @@
       flex-direction: column;
       align-items: start;
       padding: 0 6px 6px 6px;
+      visibility: hidden;
+      opacity: 0;
+      transition: all 0.3s;
     }
     .service > .details > .stats > p {
       height: 0;
+      visibility: hidden;
+      opacity: 0;
+      transition: all 0.3s;
     }
 
     .chart {
@@ -224,19 +240,21 @@
 
 <main class="container">
   {{ range $key, $value := .List }}
-  <label for="details-toggle-{{$key}}" title="Show details" class="service">
+  <div title="Show details" class="service">
     <input type="checkbox" id="details-toggle-{{$key}}"/>
-    <div class="row">
+
+    <label for="details-toggle-{{$key}}" class="row">
       <div class="left">
         <i class="status {{ $value.Status }}" title="Actual status is: {{ $value.Status }}, last check was {{ $value.LastCheck }}"></i>
-        <p class="name">{{ $key }}</p>
+        <p class="name" title="{{ $value.Name }}">{{ $value.Name }}</p>
       </div>
       <div class="tags">
         {{ range $tag := $value.Tags }}
         <p title="{{ $tag.Name }} tag" style="background-color: {{ $tag.Color }};">{{ $tag.Name }}</p>
         {{ end }}
       </div>
-    </div>
+    </label>
+
     <div class="details">
       <div class="stats">
         <p>Last status change: {{ $value.LastCheck }}</p>
@@ -253,7 +271,7 @@
         {{ end }}
       </ul>
     </div>
-  </label>
+  </div>
   {{ end }}
 </main>
 

@@ -3,6 +3,7 @@ package types
 import "time"
 
 type Service struct {
+	Name      string
 	Status    StatusType
 	LastCheck string
 	Checks    map[string]bool

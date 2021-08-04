@@ -148,4 +148,36 @@ func TestConfig_Validate(t *testing.T) {
 		require.NoError(t, cfg.Validate())
 		require.Equal(t, []int{200}, cfg.Hosts[0].Success.Code)
 	})
+
+	t.Run("headers", func(t *testing.T) {
+		cfg := &Config{
+			Retry:        "1s",
+			Timeout:      "1s",
+			InitialDelay: "0s",
+			Success: &Success{
+				Code: []int{200},
+			},
+			Headers: map[string]string{
+				"key-1": "value-1",
+				"key-2": "value-2",
+				"key-3": "value-3",
+			},
+			Hosts: []Host{
+				{
+					URL: "ok",
+					Headers: map[string]string{
+						"key-2": "value-2-2",
+					},
+				},
+			},
+		}
+
+		require.NoError(t, cfg.Validate())
+
+		require.Len(t, cfg.Hosts[0].Headers, 3)
+
+		require.Equal(t, "value-1", cfg.Hosts[0].Headers["key-1"])
+		require.Equal(t, "value-2-2", cfg.Hosts[0].Headers["key-2"])
+		require.Equal(t, "value-3", cfg.Hosts[0].Headers["key-3"])
+	})
 }

@@ -41,6 +41,10 @@ func (d *Dialer) Dial(ctx context.Context, h *types.Host) (int, []byte, bool) {
 		}
 		req.WithContext(ctx)
 
+		for key, value := range h.Headers {
+			req.Header.Set(key, value)
+		}
+
 		client := http.Client{
 			Timeout: h.TimeoutInterval,
 		}

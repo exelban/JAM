@@ -16,13 +16,15 @@ import (
 type Config struct {
 	MaxConn int `json:"maxConn" yaml:"maxConn"`
 
-	Retry            string         `json:"retry" yaml:"retry"`
-	Timeout          string         `json:"timeout" yaml:"timeout"`
-	InitialDelay     string         `json:"initialDelay" yaml:"initialDelay"`
-	SuccessThreshold int            `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int            `json:"failureThreshold" yaml:"failureThreshold"`
-	Success          *Success       `json:"success" yaml:"success"`
-	History          *HistoryCounts `json:"history" yaml:"history"`
+	Retry            string `json:"retry" yaml:"retry"`
+	Timeout          string `json:"timeout" yaml:"timeout"`
+	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
+	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
+	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
+
+	Success *Success          `json:"success" yaml:"success"`
+	History *HistoryCounts    `json:"history" yaml:"history"`
+	Headers map[string]string `json:"headers" yaml:"headers"`
 
 	Hosts []Host `json:"hosts" yaml:"hosts"`
 }
@@ -156,6 +158,12 @@ func (c *Config) Validate() error {
 			c.Hosts[i].History.Success = c.History.Success
 		} else if host.History.Failure == 0 {
 			c.Hosts[i].History.Failure = c.History.Failure
+		}
+
+		for key, value := range c.Headers {
+			if _, ok := c.Hosts[i].Headers[key]; !ok {
+				c.Hosts[i].Headers[key] = value
+			}
 		}
 
 		log.Printf("[INFO] %s settings: InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
