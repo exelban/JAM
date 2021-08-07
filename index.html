@@ -242,7 +242,6 @@
   {{ range $key, $value := .List }}
   <div title="Show details" class="service">
     <input type="checkbox" id="details-toggle-{{$key}}"/>
-
     <label for="details-toggle-{{$key}}" class="row">
       <div class="left">
         <i class="status {{ $value.Status }}" title="Actual status is: {{ $value.Status }}, last check was {{ $value.LastCheck }}"></i>
@@ -254,7 +253,6 @@
         {{ end }}
       </div>
     </label>
-
     <div class="details">
       <div class="stats">
         <p>Last status change: {{ $value.LastCheck }}</p>
