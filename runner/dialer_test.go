@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/cheks/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/pkgz/rest"
 	"github.com/stretchr/testify/require"
@@ -27,19 +27,19 @@ func TestDialer_Dial(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("wrong method", func(t *testing.T) {
-		code, b, ok := dialer.Dial(ctx, &types.Host{
+		resp := dialer.Dial(ctx, &config.Host{
 			Method: "?",
 		})
-		require.False(t, ok)
-		require.Equal(t, 0, code)
-		require.Empty(t, b)
+		require.False(t, resp.OK)
+		require.Equal(t, 0, resp.Code)
+		require.Empty(t, resp.Bytes)
 	})
 
 	t.Run("wrong url", func(t *testing.T) {
-		code, b, ok := dialer.Dial(ctx, &types.Host{})
-		require.False(t, ok)
-		require.Equal(t, 0, code)
-		require.Empty(t, b)
+		resp := dialer.Dial(ctx, &config.Host{})
+		require.False(t, resp.OK)
+		require.Equal(t, 0, resp.Code)
+		require.Empty(t, resp.Bytes)
 	})
 
 	t.Run("semaphore check", func(t *testing.T) {
@@ -49,13 +49,13 @@ func TestDialer_Dial(t *testing.T) {
 
 		for i := 0; i < 9; i++ {
 			go func() {
-				code, b, ok := dialer.Dial(ctx, &types.Host{
+				resp := dialer.Dial(ctx, &config.Host{
 					Method: "GET",
 					URL:    ts.URL,
 				})
-				require.True(t, ok)
-				require.Equal(t, http.StatusOK, code)
-				require.NotEmpty(t, b)
+				require.True(t, resp.OK)
+				require.Equal(t, http.StatusOK, resp.Code)
+				require.NotEmpty(t, resp.Bytes)
 				wg.Done()
 			}()
 		}
@@ -66,14 +66,14 @@ func TestDialer_Dial(t *testing.T) {
 	})
 
 	t.Run("check timeout", func(t *testing.T) {
-		code, b, ok := dialer.Dial(ctx, &types.Host{
+		resp := dialer.Dial(ctx, &config.Host{
 			Method:          "GET",
 			URL:             ts.URL,
 			TimeoutInterval: time.Millisecond * 5,
 		})
-		require.False(t, ok)
-		require.Equal(t, 0, code)
-		require.Empty(t, b)
+		require.False(t, resp.OK)
+		require.Equal(t, 0, resp.Code)
+		require.Empty(t, resp.Bytes)
 	})
 }
 

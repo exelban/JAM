@@ -2,7 +2,7 @@ package api
 
 import (
 	"crypto/subtle"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/cheks/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -16,8 +16,8 @@ import (
 //go:generate moq -out mock_test.go . monitor
 
 type monitor interface {
-	Status() map[string]types.StatusType
-	Services() []types.Service
+	Status() map[string]config.StatusType
+	Services() []config.Service
 }
 
 type Auth struct {
@@ -34,7 +34,7 @@ type Rest struct {
 	Auth     Auth
 }
 
-var indexPath = "index.html"
+var indexPath = "web/src/"
 
 func (s *Rest) Router() chi.Router {
 	router := chi.NewRouter()
@@ -57,8 +57,9 @@ func (s *Rest) Router() chi.Router {
 
 	router.Use(rest.Logger)
 	router.NotFound(rest.NotFound)
+	router.Use(s.basicAuth)
 
-	router.With(s.basicAuth).Get("/", func(w http.ResponseWriter, r *http.Request) {
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		tmpl := s.Template
 		if s.Live {
 			t, err := template.ParseFiles(indexPath)
@@ -72,7 +73,7 @@ func (s *Rest) Router() chi.Router {
 
 		items := struct {
 			Version string
-			List    []types.Service
+			List    []config.Service
 		}{
 			Version: s.Version,
 			List:    s.Monitor.Services(),
@@ -83,8 +84,7 @@ func (s *Rest) Router() chi.Router {
 			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, err.Error())
 		}
 	})
-
-	router.With(s.basicAuth).Get("/status", func(w http.ResponseWriter, r *http.Request) {
+	router.Get("/status", func(w http.ResponseWriter, r *http.Request) {
 		rest.JsonResponse(w, s.Monitor.Status())
 	})
 

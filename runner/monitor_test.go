@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/cheks/config"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -12,51 +12,104 @@ func TestMonitor_Run(t *testing.T) {
 	ts, status, shutdown := dialServer(0)
 	defer shutdown()
 
-	m := Monitor{
-		Config: &types.Config{
-			Hosts: []types.Host{
-				{
-					Name: "host-0",
-					URL:  ts.URL,
-					Success: &types.Success{
-						Code: []int{200},
-					},
-					SuccessThreshold:     2,
-					FailureThreshold:     3,
-					InitialDelayInterval: time.Millisecond * 10,
-					RetryInterval:        time.Millisecond * 30,
-					TimeoutInterval:      time.Millisecond * 100,
-					History: &types.HistoryCounts{
-						Check:   100,
-						Success: 0,
-						Failure: 0,
-					},
-				},
-			},
-		},
-		Dialer: NewDialer(3),
-	}
+	m := Monitor{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	require.NoError(t, m.Run(ctx))
+	hosts := &config.Cfg{
+		Hosts: []config.Host{
+			{
+				Name: "host-0",
+				URL:  ts.URL,
+				Success: &config.Success{
+					Code: []int{200},
+				},
+				SuccessThreshold:     2,
+				FailureThreshold:     3,
+				InitialDelayInterval: time.Millisecond * 10,
+				RetryInterval:        time.Millisecond * 30,
+				TimeoutInterval:      time.Millisecond * 100,
+				History: &config.HistoryCounts{
+					Check:   100,
+					Success: 0,
+					Failure: 0,
+				},
+			},
+		},
+		MaxConn: 3,
+	}
+
+	require.NoError(t, m.Run(ctx, hosts))
 
 	t.Run("must be up", func(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
-		require.Equal(t, types.UP, m.Status()["host-0"])
+		require.Equal(t, config.UP, m.Status()["host-0"])
 	})
 
 	t.Run("must does down", func(t *testing.T) {
 		status.Store(false)
 		time.Sleep(time.Millisecond * 100)
-		require.Equal(t, types.DOWN, m.Status()["host-0"])
+		require.Equal(t, config.DOWN, m.Status()["host-0"])
 	})
 
 	t.Run("must does down", func(t *testing.T) {
 		status.Store(true)
 		time.Sleep(time.Millisecond * 30)
-		require.Equal(t, types.DOWN, m.Status()["host-0"])
+		require.Equal(t, config.DOWN, m.Status()["host-0"])
+	})
+
+	t.Run("add new host", func(t *testing.T) {
+		require.Len(t, m.watchers, 1)
+		hosts.Hosts = append(hosts.Hosts, config.Host{
+			Name: "host-1",
+			URL:  ts.URL,
+			Success: &config.Success{
+				Code: []int{200},
+			},
+			SuccessThreshold:     2,
+			FailureThreshold:     3,
+			InitialDelayInterval: time.Millisecond * 10,
+			RetryInterval:        time.Millisecond * 30,
+			TimeoutInterval:      time.Millisecond * 100,
+			History: &config.HistoryCounts{
+				Check:   100,
+				Success: 0,
+				Failure: 0,
+			},
+		})
+		require.NoError(t, m.Run(ctx, hosts))
+		require.Len(t, m.watchers, 2)
+	})
+
+	t.Run("add new host (the same, must not be added)", func(t *testing.T) {
+		require.Len(t, m.watchers, 2)
+		hosts.Hosts = append(hosts.Hosts, config.Host{
+			Name: "host-1",
+			URL:  ts.URL,
+			Success: &config.Success{
+				Code: []int{200},
+			},
+			SuccessThreshold:     2,
+			FailureThreshold:     3,
+			InitialDelayInterval: time.Millisecond * 10,
+			RetryInterval:        time.Millisecond * 30,
+			TimeoutInterval:      time.Millisecond * 100,
+			History: &config.HistoryCounts{
+				Check:   100,
+				Success: 0,
+				Failure: 0,
+			},
+		})
+		require.NoError(t, m.Run(ctx, hosts))
+		require.Len(t, m.watchers, 2)
+	})
+
+	t.Run("remove host", func(t *testing.T) {
+		require.Len(t, m.watchers, 2)
+		hosts.Hosts = hosts.Hosts[:1]
+		require.NoError(t, m.Run(ctx, hosts))
+		require.Len(t, m.watchers, 1)
 	})
 
 	cancel()
@@ -66,29 +119,29 @@ func TestMonitor_Status(t *testing.T) {
 	m := Monitor{
 		watchers: []*watcher{
 			{
-				host: types.Host{
+				host: config.Host{
 					Name: "host-0",
 				},
 			},
 			{
-				host: types.Host{
+				host: config.Host{
 					Name: "host-1",
 				},
-				status: types.UP,
+				status: config.UP,
 			},
 			{
-				host: types.Host{
+				host: config.Host{
 					Name: "host-2",
 				},
-				status: types.DOWN,
+				status: config.DOWN,
 			},
 		},
 	}
 
 	list := m.Status()
-	require.Equal(t, types.Unknown, list["host-0"])
-	require.Equal(t, types.UP, list["host-1"])
-	require.Equal(t, types.DOWN, list["host-2"])
+	require.Equal(t, config.Unknown, list["host-0"])
+	require.Equal(t, config.UP, list["host-1"])
+	require.Equal(t, config.DOWN, list["host-2"])
 }
 
 func TestMonitor_Services(t *testing.T) {
@@ -99,30 +152,30 @@ func TestMonitor_Services(t *testing.T) {
 		watchers: []*watcher{
 			{
 				lastCheck: t1,
-				host: types.Host{
+				host: config.Host{
 					Name: "b",
 				},
-				checks: []check{
+				checks: []config.HttpResponse{
 					{
-						time:  time.Now(),
-						value: false,
+						Timestamp: time.Now(),
+						Status:    false,
 					},
 				},
 			},
 			{
-				host: types.Host{
+				host: config.Host{
 					Name: "a",
 				},
-				status:    types.UP,
+				status:    config.UP,
 				lastCheck: t2,
-				checks: []check{
+				checks: []config.HttpResponse{
 					{
-						time:  time.Now(),
-						value: false,
+						Timestamp: time.Now(),
+						Status:    false,
 					},
 					{
-						time:  time.Now().Add(-time.Minute),
-						value: true,
+						Timestamp: time.Now().Add(-time.Minute),
+						Status:    true,
 					},
 				},
 			},
@@ -134,8 +187,8 @@ func TestMonitor_Services(t *testing.T) {
 	require.Equal(t, "b", list[0].Name)
 	require.Equal(t, "a", list[1].Name)
 
-	require.Equal(t, t1.Format("02.01.2006 15:04:05"), list[0].LastCheck)
-	require.Equal(t, t2.Format("02.01.2006 15:04:05"), list[1].LastCheck)
+	require.Equal(t, t1, list[0].Status.Timestamp)
+	require.Equal(t, t2, list[1].Status.Timestamp)
 
 	require.Len(t, list[0].Checks, 1)
 	require.Len(t, list[1].Checks, 2)

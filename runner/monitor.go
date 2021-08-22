@@ -2,52 +2,60 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/types"
-	"log"
+	"github.com/exelban/cheks/config"
 	"sync"
-	"time"
 )
 
 // Monitor - main service which track the hosts liveness
 type Monitor struct {
-	Dialer *Dialer
+	dialer     *Dialer
+	watchers   []*watcher
+	tagsColors map[string]string
 
-	Config   *types.Config
-	watchers []*watcher
-
-	tagsColors map[string]string // could be persistent and returned after restart or reload
-
-	mu sync.RWMutex
+	mu  sync.RWMutex
+	ctx context.Context
 }
 
 // Run - run the monitor. Creates a jobs for each host in the separate threads
-func (m *Monitor) Run(ctx context.Context) error {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (m *Monitor) Run(ctx context.Context, cfg *config.Cfg) error {
+	m.mu.Lock()
+	{
+		if m.ctx != nil {
+			m.ctx.Done()
+		}
+		if m.tagsColors == nil {
+			m.tagsColors = make(map[string]string)
+		}
 
-	if m.tagsColors == nil {
-		m.tagsColors = make(map[string]string)
+		m.ctx = context.Background()
+		m.dialer = NewDialer(cfg.MaxConn)
+	}
+	m.mu.Unlock()
+
+	// add hosts which are does not have watchers
+	for _, host := range cfg.Hosts {
+		ok := false
+		for _, w := range m.watchers {
+			if host.Name == w.host.Name && host.URL == w.host.URL {
+				ok = true
+			}
+		}
+		if !ok {
+			m.add(host)
+		}
 	}
 
-	for _, host := range m.Config.Hosts {
-		ctx_, cancel := context.WithCancel(ctx)
-
-		w := &watcher{
-			dialer: m.Dialer,
-
-			host:   host,
-			status: types.Unknown,
-			ctx:    ctx_,
-			cancel: cancel,
-		}
-		go m.watch(w)
-
-		m.watchers = append(m.watchers, w)
-
-		for _, tag := range host.Tags {
-			if _, ok := m.tagsColors[tag]; !ok {
-				m.tagsColors[tag] = types.RandomColor()
+	// remove watchers which does not present in the config
+	for i := len(m.watchers) - 1; i >= 0; i-- {
+		ok := false
+		for _, host := range cfg.Hosts {
+			if host.Name == m.watchers[i].host.Name && host.URL == m.watchers[i].host.URL {
+				ok = true
 			}
+		}
+		if !ok {
+			m.watchers[i].cancel()
+			m.watchers = append(m.watchers[:i], m.watchers[i+1:]...)
 		}
 	}
 
@@ -55,8 +63,8 @@ func (m *Monitor) Run(ctx context.Context) error {
 }
 
 // Status - returns the actual statuses of all hosts
-func (m *Monitor) Status() map[string]types.StatusType {
-	list := make(map[string]types.StatusType)
+func (m *Monitor) Status() map[string]config.StatusType {
+	list := make(map[string]config.StatusType)
 
 	m.mu.RLock()
 	for _, w := range m.watchers {
@@ -71,37 +79,31 @@ func (m *Monitor) Status() map[string]types.StatusType {
 }
 
 // Services - return the services for the app
-func (m *Monitor) Services() []types.Service {
-	list := []types.Service{}
+func (m *Monitor) Services() []config.Service {
+	list := []config.Service{}
 
 	m.mu.RLock()
 	for _, w := range m.watchers {
 		w.mu.RLock()
 		{
-			history := make(map[string]bool)
-			for _, p := range w.checks {
-				history[p.time.Format("15:04:05 02.01.2006")] = p.value
-			}
-
-			var tags []struct {
-				Name  string
-				Color string
-			}
+			var tags []config.Tag
 			for _, tag := range w.host.Tags {
-				tags = append(tags, struct {
-					Name  string
-					Color string
-				}{Name: tag, Color: m.tagsColors[tag]})
+				tags = append(tags, config.Tag{
+					Name:  tag,
+					Color: m.tagsColors[tag],
+				})
 			}
 
-			list = append(list, types.Service{
-				Name:      w.host.String(),
-				Status:    w.status,
-				LastCheck: w.lastCheck.Format("02.01.2006 15:04:05"),
-				Checks:    history,
-				Success:   w.success,
-				Failure:   w.failure,
-				Tags:      tags,
+			list = append(list, config.Service{
+				Name: w.host.String(),
+				Status: config.Status{
+					Value:     w.status,
+					Timestamp: w.lastCheck,
+				},
+				Checks:  w.checks,
+				Success: w.success,
+				Failure: w.failure,
+				Tags:    tags,
 			})
 		}
 		w.mu.RUnlock()
@@ -111,22 +113,27 @@ func (m *Monitor) Services() []types.Service {
 	return list
 }
 
-// watch - hosts job with ticker. Runs the liveness check for host
-func (m *Monitor) watch(w *watcher) {
-	log.Printf("[INFO] %s: new watcher", w.host.String())
+func (m *Monitor) add(host config.Host) {
+	ctx_, cancel := context.WithCancel(m.ctx)
 
-	time.Sleep(w.host.InitialDelayInterval)
-	w.check()
+	w := &watcher{
+		dialer: m.dialer,
+		host:   host,
+		ctx:    ctx_,
+		cancel: cancel,
+	}
+	go w.run()
 
-	ticker := time.NewTicker(w.host.RetryInterval)
-	for {
-		select {
-		case <-ticker.C:
-			w.check()
-		case <-w.ctx.Done():
-			log.Printf("[DEBUG] %s: stopped", w.host.String())
-			ticker.Stop()
-			return
+	m.mu.Lock()
+	{
+		m.watchers = append(m.watchers, w)
+		for _, tag := range host.Tags {
+			if _, ok := m.tagsColors[tag]; !ok {
+				m.tagsColors[tag] = config.RandomColor()
+			}
 		}
 	}
+	m.mu.Unlock()
+
+	return
 }

@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/cheks/config"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -70,11 +70,11 @@ func TestRest_dashboard(t *testing.T) {
 func server() (*httptest.Server, func()) {
 	apiRest := &Rest{
 		Monitor: &monitorMock{
-			StatusFunc: func() map[string]types.StatusType {
-				return make(map[string]types.StatusType)
+			StatusFunc: func() map[string]config.StatusType {
+				return make(map[string]config.StatusType)
 			},
-			ServicesFunc: func() []types.Service {
-				return []types.Service{}
+			ServicesFunc: func() []config.Service {
+				return []config.Service{}
 			},
 		},
 		Live: true,

@@ -244,7 +244,7 @@
     <input type="checkbox" id="details-toggle-{{$key}}"/>
     <label for="details-toggle-{{$key}}" class="row">
       <div class="left">
-        <i class="status {{ $value.Status }}" title="Actual status is: {{ $value.Status }}, last check was {{ $value.LastCheck }}"></i>
+        <i class="status {{ $value.Status.Value }}" title="Actual status is: {{ $value.Status.Value }}, last check was {{ $value.Status.Timestamp }}"></i>
         <p class="name" title="{{ $value.Name }}">{{ $value.Name }}</p>
       </div>
       <div class="tags">
@@ -255,7 +255,7 @@
     </label>
     <div class="details">
       <div class="stats">
-        <p>Last status change: {{ $value.LastCheck }}</p>
+        <p>Last status change: {{ $value.Status.Timestamp }}</p>
         <p>Success count: {{ len $value.Success }}</p>
         <p>Failure count: {{ len $value.Failure }}</p>
       </div>
