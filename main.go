@@ -5,8 +5,8 @@ import (
 	"crypto/rand"
 	"embed"
 	"github.com/exelban/cheks/api"
-	"github.com/exelban/cheks/config"
-	"github.com/exelban/cheks/runner"
+	runner "github.com/exelban/cheks/monitor"
+	"github.com/exelban/cheks/types"
 	"github.com/pkg/errors"
 	"github.com/pkgz/rest"
 	"github.com/pkgz/service"
@@ -29,7 +29,7 @@ type args struct {
 type app struct {
 	args args
 
-	config  *config.Cfg
+	config  *types.Cfg
 	monitor *runner.Monitor
 	api     *api.Rest
 
@@ -78,7 +78,7 @@ func New(ctx context.Context, args args) (*app, error) {
 		}
 	}
 
-	cfg, err := config.New(ctx, args.ConfigPath)
+	cfg, err := types.NewConfig(ctx, args.ConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (a *app) run(ctx context.Context) error {
 			if err := a.config.Validate(); err != nil {
 				return errors.Wrap(err, "validate config")
 			}
-			if err := a.monitor.Run(ctx, a.config); err != nil {
+			if err := a.monitor.Run(a.config); err != nil {
 				return errors.Wrap(err, "reload watcher on config updates")
 			}
 		case <-ctx.Done():

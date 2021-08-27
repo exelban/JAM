@@ -2,7 +2,7 @@ package api
 
 import (
 	"crypto/subtle"
-	"github.com/exelban/cheks/config"
+	"github.com/exelban/cheks/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -16,8 +16,8 @@ import (
 //go:generate moq -out mock_test.go . monitor
 
 type monitor interface {
-	Status() map[string]config.StatusType
-	Services() []config.Service
+	Status() map[string]types.StatusType
+	Services() []types.Service
 }
 
 type Auth struct {
@@ -34,7 +34,7 @@ type Rest struct {
 	Auth     Auth
 }
 
-var indexPath = "web/src/"
+var indexPath = "index.html"
 
 func (s *Rest) Router() chi.Router {
 	router := chi.NewRouter()
@@ -73,7 +73,7 @@ func (s *Rest) Router() chi.Router {
 
 		items := struct {
 			Version string
-			List    []config.Service
+			List    []types.Service
 		}{
 			Version: s.Version,
 			List:    s.Monitor.Services(),

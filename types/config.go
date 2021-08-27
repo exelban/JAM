@@ -1,4 +1,4 @@
-package config
+package types
 
 import (
 	"context"
@@ -32,7 +32,7 @@ type Cfg struct {
 	FW   chan bool
 }
 
-func New(ctx context.Context, path string) (*Cfg, error) {
+func NewConfig(ctx context.Context, path string) (*Cfg, error) {
 	cfg := &Cfg{
 		path: path,
 		FW:   make(chan bool),

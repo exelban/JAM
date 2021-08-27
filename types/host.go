@@ -1,4 +1,4 @@
-package config
+package types
 
 import (
 	"bytes"
@@ -12,18 +12,12 @@ type Success struct {
 }
 
 type HistoryCounts struct {
+	Persistent bool `json:"persistent" yaml:"persistent"`
+
 	Check   int `json:"check" yaml:"check"`
 	Success int `json:"success" yaml:"success"`
 	Failure int `json:"failure" yaml:"failure"`
 }
-
-type StatusType string
-
-const (
-	Unknown StatusType = "unknown"
-	UP      StatusType = "up"
-	DOWN    StatusType = "down"
-)
 
 // Host - host structure
 type Host struct {

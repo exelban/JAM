@@ -2,22 +2,21 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/config"
+	"github.com/exelban/cheks/store"
+	"github.com/exelban/cheks/store/engine"
+	"github.com/exelban/cheks/types"
 	"log"
 	"sync"
 	"time"
 )
 
 type watcher struct {
-	dialer *Dialer
-	host   config.Host
+	dialer  *Dialer
+	history store.Store
+	host    types.Host
 
-	status    config.StatusType
+	status    types.StatusType
 	lastCheck time.Time
-
-	checks  []config.HttpResponse
-	success []config.HttpResponse
-	failure []config.HttpResponse
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -27,6 +26,10 @@ type watcher struct {
 
 // run - runs check loop for host
 func (w *watcher) run() {
+	if w.history == nil {
+		w.history = engine.NewLocal(w.host.History)
+	}
+
 	log.Printf("[INFO] %s: new watcher", w.host.String())
 
 	time.Sleep(w.host.InitialDelayInterval)
@@ -57,11 +60,7 @@ func (w *watcher) check() {
 	resp.Status = w.host.Status(resp.Code, resp.Bytes)
 	w.lastCheck = time.Now()
 
-	if len(w.checks) >= w.host.History.Check {
-		w.checks = w.checks[1:len(w.checks)]
-	}
-	w.checks = append(w.checks, resp)
-
+	w.history.Add(resp)
 	w.validate()
 
 	log.Printf("[DEBUG] %s: %s status (last: %v)", w.host.String(), w.status, resp.Status)
@@ -69,35 +68,37 @@ func (w *watcher) check() {
 
 // validate - checks success and failure thresholds. And settings the host status
 func (w *watcher) validate() {
-	if len(w.checks) > 0 && len(w.checks) >= w.host.FailureThreshold && w.status != config.DOWN {
+	checks := w.history.Checks()
+
+	if len(checks) > 0 && len(checks) >= w.host.FailureThreshold && w.status != types.DOWN {
 		ok := true
-		for _, v := range w.checks[len(w.checks)-w.host.FailureThreshold:] {
+		for _, v := range checks[len(checks)-w.host.FailureThreshold:] {
 			if v.Status {
 				ok = false
 			}
 		}
 
 		if ok {
-			w.failure = append(w.failure, w.checks[len(w.checks)-1])
-			w.status = config.DOWN
+			w.history.SetStatus(types.DOWN)
+			w.status = types.DOWN
 		}
 	}
 
-	if len(w.checks) > 0 && len(w.checks) >= w.host.SuccessThreshold && w.status != config.UP {
+	if len(checks) > 0 && len(checks) >= w.host.SuccessThreshold && w.status != types.UP {
 		ok := true
-		for _, v := range w.checks[len(w.checks)-w.host.SuccessThreshold:] {
+		for _, v := range checks[len(checks)-w.host.SuccessThreshold:] {
 			if !v.Status {
 				ok = false
 			}
 		}
 
 		if ok {
-			w.success = append(w.success, w.checks[len(w.checks)-1])
-			w.status = config.UP
+			w.history.SetStatus(types.UP)
+			w.status = types.UP
 		}
 	}
 
 	if w.status == "" {
-		w.status = config.Unknown
+		w.status = types.Unknown
 	}
 }

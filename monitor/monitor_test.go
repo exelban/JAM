@@ -1,28 +1,25 @@
 package runner
 
 import (
-	"context"
-	"github.com/exelban/cheks/config"
+	"github.com/exelban/cheks/store/engine"
+	"github.com/exelban/cheks/types"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
 func TestMonitor_Run(t *testing.T) {
-	ts, status, shutdown := dialServer(0)
+	ts, status, shutdown := srv(0)
 	defer shutdown()
 
 	m := Monitor{}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	hosts := &config.Cfg{
-		Hosts: []config.Host{
+	hosts := &types.Cfg{
+		Hosts: []types.Host{
 			{
 				Name: "host-0",
 				URL:  ts.URL,
-				Success: &config.Success{
+				Success: &types.Success{
 					Code: []int{200},
 				},
 				SuccessThreshold:     2,
@@ -30,7 +27,7 @@ func TestMonitor_Run(t *testing.T) {
 				InitialDelayInterval: time.Millisecond * 10,
 				RetryInterval:        time.Millisecond * 30,
 				TimeoutInterval:      time.Millisecond * 100,
-				History: &config.HistoryCounts{
+				History: &types.HistoryCounts{
 					Check:   100,
 					Success: 0,
 					Failure: 0,
@@ -40,31 +37,31 @@ func TestMonitor_Run(t *testing.T) {
 		MaxConn: 3,
 	}
 
-	require.NoError(t, m.Run(ctx, hosts))
+	require.NoError(t, m.Run(hosts))
 
 	t.Run("must be up", func(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
-		require.Equal(t, config.UP, m.Status()["host-0"])
+		require.Equal(t, types.UP, m.Status()["host-0"])
 	})
 
 	t.Run("must does down", func(t *testing.T) {
 		status.Store(false)
 		time.Sleep(time.Millisecond * 100)
-		require.Equal(t, config.DOWN, m.Status()["host-0"])
+		require.Equal(t, types.DOWN, m.Status()["host-0"])
 	})
 
 	t.Run("must does down", func(t *testing.T) {
 		status.Store(true)
 		time.Sleep(time.Millisecond * 30)
-		require.Equal(t, config.DOWN, m.Status()["host-0"])
+		require.Equal(t, types.DOWN, m.Status()["host-0"])
 	})
 
 	t.Run("add new host", func(t *testing.T) {
 		require.Len(t, m.watchers, 1)
-		hosts.Hosts = append(hosts.Hosts, config.Host{
+		hosts.Hosts = append(hosts.Hosts, types.Host{
 			Name: "host-1",
 			URL:  ts.URL,
-			Success: &config.Success{
+			Success: &types.Success{
 				Code: []int{200},
 			},
 			SuccessThreshold:     2,
@@ -72,22 +69,22 @@ func TestMonitor_Run(t *testing.T) {
 			InitialDelayInterval: time.Millisecond * 10,
 			RetryInterval:        time.Millisecond * 30,
 			TimeoutInterval:      time.Millisecond * 100,
-			History: &config.HistoryCounts{
+			History: &types.HistoryCounts{
 				Check:   100,
 				Success: 0,
 				Failure: 0,
 			},
 		})
-		require.NoError(t, m.Run(ctx, hosts))
+		require.NoError(t, m.Run(hosts))
 		require.Len(t, m.watchers, 2)
 	})
 
 	t.Run("add new host (the same, must not be added)", func(t *testing.T) {
 		require.Len(t, m.watchers, 2)
-		hosts.Hosts = append(hosts.Hosts, config.Host{
+		hosts.Hosts = append(hosts.Hosts, types.Host{
 			Name: "host-1",
 			URL:  ts.URL,
-			Success: &config.Success{
+			Success: &types.Success{
 				Code: []int{200},
 			},
 			SuccessThreshold:     2,
@@ -95,89 +92,100 @@ func TestMonitor_Run(t *testing.T) {
 			InitialDelayInterval: time.Millisecond * 10,
 			RetryInterval:        time.Millisecond * 30,
 			TimeoutInterval:      time.Millisecond * 100,
-			History: &config.HistoryCounts{
+			History: &types.HistoryCounts{
 				Check:   100,
 				Success: 0,
 				Failure: 0,
 			},
 		})
-		require.NoError(t, m.Run(ctx, hosts))
+		require.NoError(t, m.Run(hosts))
 		require.Len(t, m.watchers, 2)
 	})
 
 	t.Run("remove host", func(t *testing.T) {
 		require.Len(t, m.watchers, 2)
 		hosts.Hosts = hosts.Hosts[:1]
-		require.NoError(t, m.Run(ctx, hosts))
+		require.NoError(t, m.Run(hosts))
 		require.Len(t, m.watchers, 1)
 	})
-
-	cancel()
 }
 
 func TestMonitor_Status(t *testing.T) {
 	m := Monitor{
 		watchers: []*watcher{
 			{
-				host: config.Host{
+				host: types.Host{
 					Name: "host-0",
 				},
+				history: engine.NewLocal(&types.HistoryCounts{}),
 			},
 			{
-				host: config.Host{
+				host: types.Host{
 					Name: "host-1",
 				},
-				status: config.UP,
+				history: engine.NewLocal(&types.HistoryCounts{}),
+				status:  types.UP,
 			},
 			{
-				host: config.Host{
+				host: types.Host{
 					Name: "host-2",
 				},
-				status: config.DOWN,
+				history: engine.NewLocal(&types.HistoryCounts{}),
+				status:  types.DOWN,
 			},
 		},
 	}
 
 	list := m.Status()
-	require.Equal(t, config.Unknown, list["host-0"])
-	require.Equal(t, config.UP, list["host-1"])
-	require.Equal(t, config.DOWN, list["host-2"])
+	require.Equal(t, types.Unknown, list["host-0"])
+	require.Equal(t, types.UP, list["host-1"])
+	require.Equal(t, types.DOWN, list["host-2"])
 }
 
 func TestMonitor_Services(t *testing.T) {
 	t1 := time.Now().Add(-time.Minute)
 	t2 := time.Now().Add(time.Minute)
 
+	h1 := engine.NewLocal(&types.HistoryCounts{
+		Check:   10,
+		Success: 10,
+		Failure: 10,
+	})
+	h1.Add(types.HttpResponse{
+		Timestamp: time.Now(),
+		Status:    false,
+	})
+
+	h2 := engine.NewLocal(&types.HistoryCounts{
+		Check:   10,
+		Success: 10,
+		Failure: 10,
+	})
+	h2.Add(types.HttpResponse{
+		Timestamp: time.Now(),
+		Status:    false,
+	})
+	h2.Add(types.HttpResponse{
+		Timestamp: time.Now().Add(-time.Minute),
+		Status:    true,
+	})
+
 	m := Monitor{
 		watchers: []*watcher{
 			{
 				lastCheck: t1,
-				host: config.Host{
+				host: types.Host{
 					Name: "b",
 				},
-				checks: []config.HttpResponse{
-					{
-						Timestamp: time.Now(),
-						Status:    false,
-					},
-				},
+				history: h1,
 			},
 			{
-				host: config.Host{
+				host: types.Host{
 					Name: "a",
 				},
-				status:    config.UP,
+				status:    types.UP,
 				lastCheck: t2,
-				checks: []config.HttpResponse{
-					{
-						Timestamp: time.Now(),
-						Status:    false,
-					},
-					{
-						Timestamp: time.Now().Add(-time.Minute),
-						Status:    true,
-					},
-				},
+				history:   h2,
 			},
 		},
 	}
@@ -189,7 +197,4 @@ func TestMonitor_Services(t *testing.T) {
 
 	require.Equal(t, t1, list[0].Status.Timestamp)
 	require.Equal(t, t2, list[1].Status.Timestamp)
-
-	require.Len(t, list[0].Checks, 1)
-	require.Len(t, list[1].Checks, 2)
 }

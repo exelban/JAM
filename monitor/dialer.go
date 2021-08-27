@@ -3,7 +3,7 @@ package runner
 import (
 	"context"
 	"crypto/tls"
-	"github.com/exelban/cheks/config"
+	"github.com/exelban/cheks/types"
 	"io/ioutil"
 	"log"
 	"net"
@@ -25,13 +25,13 @@ func NewDialer(maxConn int) *Dialer {
 }
 
 // Dial - make a http request to the provided host
-func (d *Dialer) Dial(ctx context.Context, h *config.Host) config.HttpResponse {
+func (d *Dialer) Dial(ctx context.Context, h *types.Host) types.HttpResponse {
 	d.sem <- 1
 	defer func() {
 		<-d.sem
 	}()
 
-	resp := make(chan config.HttpResponse, 1)
+	resp := make(chan types.HttpResponse, 1)
 	go func() {
 		resp <- d.call(ctx, h)
 	}()
@@ -39,7 +39,7 @@ func (d *Dialer) Dial(ctx context.Context, h *config.Host) config.HttpResponse {
 	return <-resp
 }
 
-func (d *Dialer) call(ctx context.Context, h *config.Host) (response config.HttpResponse) {
+func (d *Dialer) call(ctx context.Context, h *types.Host) (response types.HttpResponse) {
 	req, err := http.NewRequest(h.Method, h.URL, nil)
 	if err != nil {
 		log.Printf("[ERROR] prepare request %v", err)

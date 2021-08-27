@@ -2,7 +2,7 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/config"
+	"github.com/exelban/cheks/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/pkgz/rest"
 	"github.com/stretchr/testify/require"
@@ -22,12 +22,12 @@ func TestNewDialer(t *testing.T) {
 func TestDialer_Dial(t *testing.T) {
 	dialer := NewDialer(3)
 
-	ts, _, shutdown := dialServer(time.Millisecond * 10)
+	ts, _, shutdown := srv(time.Millisecond * 10)
 	defer shutdown()
 	ctx := context.Background()
 
 	t.Run("wrong method", func(t *testing.T) {
-		resp := dialer.Dial(ctx, &config.Host{
+		resp := dialer.Dial(ctx, &types.Host{
 			Method: "?",
 		})
 		require.False(t, resp.OK)
@@ -36,7 +36,7 @@ func TestDialer_Dial(t *testing.T) {
 	})
 
 	t.Run("wrong url", func(t *testing.T) {
-		resp := dialer.Dial(ctx, &config.Host{})
+		resp := dialer.Dial(ctx, &types.Host{})
 		require.False(t, resp.OK)
 		require.Equal(t, 0, resp.Code)
 		require.Empty(t, resp.Bytes)
@@ -49,7 +49,7 @@ func TestDialer_Dial(t *testing.T) {
 
 		for i := 0; i < 9; i++ {
 			go func() {
-				resp := dialer.Dial(ctx, &config.Host{
+				resp := dialer.Dial(ctx, &types.Host{
 					Method: "GET",
 					URL:    ts.URL,
 				})
@@ -66,7 +66,7 @@ func TestDialer_Dial(t *testing.T) {
 	})
 
 	t.Run("check timeout", func(t *testing.T) {
-		resp := dialer.Dial(ctx, &config.Host{
+		resp := dialer.Dial(ctx, &types.Host{
 			Method:          "GET",
 			URL:             ts.URL,
 			TimeoutInterval: time.Millisecond * 5,
@@ -77,7 +77,7 @@ func TestDialer_Dial(t *testing.T) {
 	})
 }
 
-func dialServer(timeout time.Duration) (*httptest.Server, *atomic.Value, func()) {
+func srv(timeout time.Duration) (*httptest.Server, *atomic.Value, func()) {
 	router := chi.NewRouter()
 	status := atomic.Value{}
 	status.Store(true)

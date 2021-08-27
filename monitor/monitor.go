@@ -2,13 +2,15 @@ package runner
 
 import (
 	"context"
-	"github.com/exelban/cheks/config"
+	"github.com/exelban/cheks/store"
+	"github.com/exelban/cheks/types"
 	"sync"
 )
 
 // Monitor - main service which track the hosts liveness
 type Monitor struct {
-	dialer     *Dialer
+	dialer *Dialer
+
 	watchers   []*watcher
 	tagsColors map[string]string
 
@@ -17,7 +19,7 @@ type Monitor struct {
 }
 
 // Run - run the monitor. Creates a jobs for each host in the separate threads
-func (m *Monitor) Run(ctx context.Context, cfg *config.Cfg) error {
+func (m *Monitor) Run(cfg *types.Cfg) error {
 	m.mu.Lock()
 	{
 		if m.ctx != nil {
@@ -41,7 +43,9 @@ func (m *Monitor) Run(ctx context.Context, cfg *config.Cfg) error {
 			}
 		}
 		if !ok {
-			m.add(host)
+			if err := m.add(host); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -63,8 +67,8 @@ func (m *Monitor) Run(ctx context.Context, cfg *config.Cfg) error {
 }
 
 // Status - returns the actual statuses of all hosts
-func (m *Monitor) Status() map[string]config.StatusType {
-	list := make(map[string]config.StatusType)
+func (m *Monitor) Status() map[string]types.StatusType {
+	list := make(map[string]types.StatusType)
 
 	m.mu.RLock()
 	for _, w := range m.watchers {
@@ -79,31 +83,31 @@ func (m *Monitor) Status() map[string]config.StatusType {
 }
 
 // Services - return the services for the app
-func (m *Monitor) Services() []config.Service {
-	list := []config.Service{}
+func (m *Monitor) Services() []types.Service {
+	list := []types.Service{}
 
 	m.mu.RLock()
 	for _, w := range m.watchers {
 		w.mu.RLock()
 		{
-			var tags []config.Tag
+			var tags []types.Tag
 			for _, tag := range w.host.Tags {
-				tags = append(tags, config.Tag{
+				tags = append(tags, types.Tag{
 					Name:  tag,
 					Color: m.tagsColors[tag],
 				})
 			}
 
-			list = append(list, config.Service{
+			list = append(list, types.Service{
 				Name: w.host.String(),
-				Status: config.Status{
+				Status: types.Status{
 					Value:     w.status,
 					Timestamp: w.lastCheck,
 				},
-				Checks:  w.checks,
-				Success: w.success,
-				Failure: w.failure,
 				Tags:    tags,
+				Checks:  w.history.Checks(),
+				Success: w.history.Success(),
+				Failure: w.history.Failure(),
 			})
 		}
 		w.mu.RUnlock()
@@ -113,14 +117,21 @@ func (m *Monitor) Services() []config.Service {
 	return list
 }
 
-func (m *Monitor) add(host config.Host) {
+// add - create a watcher for host
+func (m *Monitor) add(host types.Host) error {
+	history, err := store.New(host.History)
+	if err != nil {
+		return err
+	}
+
 	ctx_, cancel := context.WithCancel(m.ctx)
 
 	w := &watcher{
-		dialer: m.dialer,
-		host:   host,
-		ctx:    ctx_,
-		cancel: cancel,
+		dialer:  m.dialer,
+		history: history,
+		host:    host,
+		ctx:     ctx_,
+		cancel:  cancel,
 	}
 	go w.run()
 
@@ -129,11 +140,11 @@ func (m *Monitor) add(host config.Host) {
 		m.watchers = append(m.watchers, w)
 		for _, tag := range host.Tags {
 			if _, ok := m.tagsColors[tag]; !ok {
-				m.tagsColors[tag] = config.RandomColor()
+				m.tagsColors[tag] = types.RandomColor()
 			}
 		}
 	}
 	m.mu.Unlock()
 
-	return
+	return nil
 }
