@@ -1,7 +1,9 @@
-package runner
+package monitor
 
 import (
 	"context"
+	"github.com/exelban/cheks/pkg/dialer"
+	"github.com/exelban/cheks/pkg/notify"
 	"github.com/exelban/cheks/store"
 	"github.com/exelban/cheks/types"
 	"sync"
@@ -9,7 +11,8 @@ import (
 
 // Monitor - main service which track the hosts liveness
 type Monitor struct {
-	dialer *Dialer
+	dialer *dialer.Dialer
+	notify *notify.Notify
 
 	watchers   []*watcher
 	tagsColors map[string]string
@@ -30,7 +33,13 @@ func (m *Monitor) Run(cfg *types.Cfg) error {
 		}
 
 		m.ctx = context.Background()
-		m.dialer = NewDialer(cfg.MaxConn)
+		m.dialer = dialer.New(cfg.MaxConn)
+		n, err := notify.New(cfg)
+		if err != nil {
+			m.mu.Unlock()
+			return err
+		}
+		m.notify = n
 	}
 	m.mu.Unlock()
 
@@ -128,6 +137,7 @@ func (m *Monitor) add(host types.Host) error {
 
 	w := &watcher{
 		dialer:  m.dialer,
+		notify:  m.notify,
 		history: history,
 		host:    host,
 		ctx:     ctx_,

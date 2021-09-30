@@ -1,4 +1,4 @@
-package runner
+package dialer
 
 import (
 	"context"
@@ -15,12 +15,12 @@ import (
 )
 
 func TestNewDialer(t *testing.T) {
-	dialer := NewDialer(3)
+	dialer := New(3)
 	require.Equal(t, 3, cap(dialer.sem))
 }
 
 func TestDialer_Dial(t *testing.T) {
-	dialer := NewDialer(3)
+	dialer := New(3)
 
 	ts, _, shutdown := srv(time.Millisecond * 10)
 	defer shutdown()

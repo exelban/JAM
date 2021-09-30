@@ -1,4 +1,4 @@
-package runner
+package dialer
 
 import (
 	"context"
@@ -17,8 +17,8 @@ type Dialer struct {
 	sem chan int
 }
 
-// NewDialer - creates a new dialer with maxConn semaphore
-func NewDialer(maxConn int) *Dialer {
+// New - creates a new dialer with maxConn semaphore
+func New(maxConn int) *Dialer {
 	return &Dialer{
 		sem: make(chan int, maxConn),
 	}

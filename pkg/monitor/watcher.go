@@ -1,7 +1,9 @@
-package runner
+package monitor
 
 import (
 	"context"
+	"github.com/exelban/cheks/pkg/dialer"
+	"github.com/exelban/cheks/pkg/notify"
 	"github.com/exelban/cheks/store"
 	"github.com/exelban/cheks/store/engine"
 	"github.com/exelban/cheks/types"
@@ -11,7 +13,8 @@ import (
 )
 
 type watcher struct {
-	dialer  *Dialer
+	dialer  *dialer.Dialer
+	notify  *notify.Notify
 	history store.Store
 	host    types.Host
 
@@ -79,8 +82,14 @@ func (w *watcher) validate() {
 		}
 
 		if ok {
-			w.history.SetStatus(types.DOWN)
-			w.status = types.DOWN
+			newStatus := types.DOWN
+			if w.status != types.Unknown {
+				if err := w.notify.Set(newStatus, w.host.String()); err != nil {
+					log.Print(err)
+				}
+			}
+			w.history.SetStatus(newStatus)
+			w.status = newStatus
 		}
 	}
 
@@ -93,8 +102,14 @@ func (w *watcher) validate() {
 		}
 
 		if ok {
-			w.history.SetStatus(types.UP)
-			w.status = types.UP
+			newStatus := types.UP
+			if w.status != types.Unknown {
+				if err := w.notify.Set(newStatus, w.host.String()); err != nil {
+					log.Print(err)
+				}
+			}
+			w.history.SetStatus(newStatus)
+			w.status = newStatus
 		}
 	}
 

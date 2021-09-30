@@ -1,7 +1,9 @@
-package runner
+package monitor
 
 import (
 	"context"
+	"github.com/exelban/cheks/pkg/dialer"
+	"github.com/exelban/cheks/pkg/notify"
 	"github.com/exelban/cheks/store/engine"
 	"github.com/exelban/cheks/types"
 	"github.com/stretchr/testify/require"
@@ -13,7 +15,8 @@ func TestWatcher_check(t *testing.T) {
 	defer shutdown()
 
 	w := &watcher{
-		dialer: NewDialer(1),
+		dialer: dialer.New(1),
+		notify: &notify.Notify{},
 		history: engine.NewLocal(&types.HistoryCounts{
 			Check: 100,
 		}),
@@ -75,6 +78,7 @@ func TestWatcher_validate(t *testing.T) {
 	t.Run("no thresholds", func(t *testing.T) {
 		w := &watcher{
 			host:    types.Host{},
+			notify:  &notify.Notify{},
 			history: engine.NewLocal(&types.HistoryCounts{}),
 		}
 		w.validate()
@@ -83,6 +87,7 @@ func TestWatcher_validate(t *testing.T) {
 
 	t.Run("1 thresholds", func(t *testing.T) {
 		w := &watcher{
+			notify: &notify.Notify{},
 			host: types.Host{
 				SuccessThreshold: 1,
 				FailureThreshold: 1,
@@ -116,6 +121,7 @@ func TestWatcher_validate(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		w := &watcher{
+			notify: &notify.Notify{},
 			host: types.Host{
 				SuccessThreshold: 3,
 				FailureThreshold: 2,
@@ -164,6 +170,7 @@ func TestWatcher_validate(t *testing.T) {
 
 	t.Run("failure", func(t *testing.T) {
 		w := &watcher{
+			notify: &notify.Notify{},
 			host: types.Host{
 				SuccessThreshold: 2,
 				FailureThreshold: 3,

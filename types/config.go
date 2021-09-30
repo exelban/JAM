@@ -13,6 +13,16 @@ import (
 	"time"
 )
 
+type Slack struct {
+	URL      string `json:"url" yaml:"url"`
+	Channel  string `json:"channel" yaml:"channel"`
+	Username string `json:"username" yaml:"username"`
+}
+
+type Alerts struct {
+	Slack *Slack `json:"slack" yaml:"slack"`
+}
+
 type Cfg struct {
 	MaxConn int `json:"maxConn" yaml:"maxConn"`
 
@@ -26,7 +36,8 @@ type Cfg struct {
 	History *HistoryCounts    `json:"history" yaml:"history"`
 	Headers map[string]string `json:"headers" yaml:"headers"`
 
-	Hosts []Host `json:"hosts" yaml:"hosts"`
+	Hosts  []Host `json:"hosts" yaml:"hosts"`
+	Alerts Alerts `json:"alerts" yaml:"alerts"`
 
 	path string
 	FW   chan bool

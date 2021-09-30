@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"embed"
 	"github.com/exelban/cheks/api"
-	runner "github.com/exelban/cheks/monitor"
+	"github.com/exelban/cheks/pkg/monitor"
 	"github.com/exelban/cheks/types"
 	"github.com/pkg/errors"
 	"github.com/pkgz/rest"
@@ -16,7 +16,6 @@ import (
 )
 
 type args struct {
-	Live       bool   `long:"live" env:"LIVE" description:"live preview of index.html"`
 	ConfigPath string `long:"config" env:"CONFIG" default:"./config.yaml" description:"path to the configuration file"`
 
 	Auth     bool   `long:"auth" env:"AUTH" description:"secure rest with credentials"`
@@ -30,7 +29,7 @@ type app struct {
 	args args
 
 	config  *types.Cfg
-	monitor *runner.Monitor
+	monitor *monitor.Monitor
 	api     *api.Rest
 
 	srv *rest.Server
@@ -70,7 +69,7 @@ func main() {
 func New(ctx context.Context, args args) (*app, error) {
 	if args.Auth {
 		if args.Username == "" {
-			return nil, errors.New("username cannot be empty when DASHBOARD_AUTH is true")
+			return nil, errors.New("username cannot be empty when AUTH is true")
 		}
 		if args.Password == "" {
 			args.Password = secureRandomAlphaString(32)
@@ -88,17 +87,17 @@ func New(ctx context.Context, args args) (*app, error) {
 		return nil, errors.Wrap(err, "parse index.html")
 	}
 
-	monitor := &runner.Monitor{}
+	monitor_ := &monitor.Monitor{}
 
 	return &app{
 		args: args,
 
 		config:  cfg,
-		monitor: monitor,
+		monitor: monitor_,
 		api: &api.Rest{
-			Monitor:  monitor,
+			Monitor:  monitor_,
 			Version:  version,
-			Live:     args.Live,
+			Live:     false,
 			Template: indexHTMLTemplate,
 			Auth: api.Auth{
 				Enabled:  args.Auth,

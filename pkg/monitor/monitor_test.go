@@ -1,9 +1,14 @@
-package runner
+package monitor
 
 import (
 	"github.com/exelban/cheks/store/engine"
 	"github.com/exelban/cheks/types"
+	"github.com/go-chi/chi/v5"
+	"github.com/pkgz/rest"
 	"github.com/stretchr/testify/require"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -197,4 +202,26 @@ func TestMonitor_Services(t *testing.T) {
 
 	require.Equal(t, t1, list[0].Status.Timestamp)
 	require.Equal(t, t2, list[1].Status.Timestamp)
+}
+
+func srv(timeout time.Duration) (*httptest.Server, *atomic.Value, func()) {
+	router := chi.NewRouter()
+	status := atomic.Value{}
+	status.Store(true)
+
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(timeout)
+		if status.Load() == true {
+			rest.OkResponse(w)
+		} else {
+			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, "error")
+		}
+	})
+
+	ts := httptest.NewServer(router)
+	shutdown := func() {
+		ts.Close()
+	}
+
+	return ts, &status, shutdown
 }
