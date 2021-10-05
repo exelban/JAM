@@ -1,6 +1,7 @@
 # cheks
 
 [![Cheks](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/cheks/preview.png)](https://github.com/exelban/cheks/releases)
+
 Simple monitoring for APIs and servers with dashboard and alerts.
 
 ## Install
@@ -49,16 +50,16 @@ hosts:
 ```
 
 Optional configuration for host:  
-`name: string` - name  
-`tags: [string]` - list of tags  
+- `name: string` - name  
+- `tags: [string]` - list of tags  
 
-`retry: string` - retry interval for request. Allowed golang style durations: 10s, 60s, 3m.  
-`timeout: string` - retry interval for request. Allowed golang style durations: 10s, 60s, 3m.  
-`initialDelay: string` - timeout before the request will be canceled. Allowed golang style durations: 10s, 60s, 3m.  
-`successThreshold: int` - number of success requests before host will be marked as live  
-`failureThreshold: int` - number of failed requests before host will be marked as dead  
+- `retry: string` - retry interval for request. Allowed golang style durations: 10s, 60s, 3m.  
+- `timeout: string` - retry interval for request. Allowed golang style durations: 10s, 60s, 3m.  
+- `initialDelay: string` - timeout before the request will be canceled. Allowed golang style durations: 10s, 60s, 3m.  
+- `successThreshold: int` - number of success requests before host will be marked as live  
+- `failureThreshold: int` - number of failed requests before host will be marked as dead  
 
-`success` - allows to define success request parameters as response code and response body:
+- `success` - allows to define success request parameters as response code and response body:
 
 ```yaml
 success:
@@ -66,7 +67,7 @@ success:
   body: {"ok": true}
 ```
 
-`headers: map[string]string` - you could specify the headers which will be sent with the request
+- `headers: map[string]string` - you could specify the headers which will be sent with the request
 
 ## License
 [MIT License](https://github.com/exelban/cheks/blob/master/LICENSE)
