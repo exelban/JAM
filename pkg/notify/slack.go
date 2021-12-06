@@ -3,15 +3,16 @@ package notify
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type Slack struct {
-	url      string
-	username string
-	channel  string
+	url     string
+	token   string
+	channel string
 
 	timeout time.Duration
 }
@@ -22,9 +23,8 @@ func (s *Slack) send(str string) error {
 		Channel  string `json:"channel,omitempty"`
 		Text     string `json:"text,omitempty"`
 	}{
-		Username: s.username,
-		Channel:  s.channel,
-		Text:     str,
+		Channel: s.channel,
+		Text:    str,
 	})
 
 	req, err := http.NewRequest(http.MethodPost, s.url, bytes.NewBuffer(b))
@@ -32,7 +32,8 @@ func (s *Slack) send(str string) error {
 		return err
 	}
 
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.token))
 
 	client := &http.Client{
 		Timeout: s.timeout,
@@ -48,8 +49,8 @@ func (s *Slack) send(str string) error {
 		return err
 	}
 
-	if buf.String() != "ok" {
-		return errors.New("non-ok response returned from Slack")
+	if !strings.Contains(buf.String(), "\"ok\":true") && !strings.Contains(buf.String(), "\"ok\": true") {
+		return fmt.Errorf("non-ok (%d) response from Slack: %s", resp.StatusCode, buf.String())
 	}
 
 	return nil

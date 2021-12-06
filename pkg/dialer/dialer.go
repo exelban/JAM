@@ -89,7 +89,9 @@ func (d *Dialer) call(ctx context.Context, h *types.Host) (response types.HttpRe
 		log.Printf("[ERROR] read body %v", err)
 		return
 	}
-	response.Bytes = b
+	if len(b) < 1024 {
+		response.Bytes = b
+	}
 	response.OK = true
 
 	return

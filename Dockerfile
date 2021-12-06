@@ -1,4 +1,4 @@
-FROM exelban/baseimage:golang-1.16 as build-app
+FROM exelban/baseimage:golang-1.17 as build-app
 
 WORKDIR /app/
 COPY go.mod .

@@ -30,7 +30,7 @@ func TestSlack_send(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("{\"ok\": true}"))
 	})
 	ts := httptest.NewServer(router)
 	defer func() {
@@ -38,10 +38,10 @@ func TestSlack_send(t *testing.T) {
 	}()
 
 	slack := &Slack{
-		url:      ts.URL,
-		username: "test",
-		channel:  "test",
-		timeout:  time.Millisecond * 10,
+		url:     ts.URL,
+		token:   "test",
+		channel: "test",
+		timeout: time.Millisecond * 10,
 	}
 
 	require.NoError(t, slack.send("test"))

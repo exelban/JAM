@@ -3,6 +3,7 @@ package notify
 import (
 	"fmt"
 	"github.com/exelban/cheks/types"
+	"github.com/pkg/errors"
 	"strings"
 	"sync"
 	"time"
@@ -25,12 +26,15 @@ func New(cfg *types.Cfg) (*Notify, error) {
 
 	if cfg.Alerts.Slack != nil {
 		slack := &Slack{
-			url:      cfg.Alerts.Slack.URL,
-			username: cfg.Alerts.Slack.Username,
-			channel:  cfg.Alerts.Slack.Channel,
-			timeout:  time.Second * 5,
+			url:     "https://slack.com/api/chat.postMessage",
+			token:   cfg.Alerts.Slack.Token,
+			channel: cfg.Alerts.Slack.Channel,
+			timeout: time.Second * 10,
 		}
 		n.clients = append(n.clients, slack)
+		if err := slack.send("I'm online"); err != nil {
+			return nil, errors.Wrap(err, "send up message")
+		}
 	}
 
 	return n, nil
