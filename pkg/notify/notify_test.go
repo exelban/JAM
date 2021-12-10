@@ -18,15 +18,13 @@ func TestNew(t *testing.T) {
 		n, err := New(&types.Cfg{
 			Alerts: types.Alerts{
 				Slack: &types.Slack{
-					URL:     "https://test",
 					Channel: "test",
 					Token:   "test",
 				},
 			},
 		})
-		require.NoError(t, err)
-		require.NotEmpty(t, n.clients)
-		require.Len(t, n.clients, 1)
+		require.Error(t, err)
+		require.Nil(t, n)
 	})
 }
 

@@ -15,39 +15,39 @@ const (
 
 // Service - structure for API
 type Service struct {
-	Name   string
-	Tags   []Tag
-	Status Status
+	Name   string `json:"name"`
+	Tags   []Tag  `json:"tags"`
+	Status Status `json:"status"`
 
-	Checks  []HttpResponse
-	Success []HttpResponse
-	Failure []HttpResponse
+	Checks  []HttpResponse `json:"checks"`
+	Success []HttpResponse `json:"success"`
+	Failure []HttpResponse `json:"failure"`
 }
 
 // Tag - color tag structure for Service
 type Tag struct {
-	Name  string
-	Color string
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 // Status - status structure for Service
 type Status struct {
-	Value     StatusType
-	Timestamp time.Time
+	Value     StatusType `json:"value"`
+	Timestamp time.Time  `json:"timestamp"`
 }
 
 // HttpResponse - response from the http dial
 type HttpResponse struct {
-	Timestamp time.Time
-	Code      int
-	Body      string
+	Timestamp time.Time `json:"timestamp"`
+	Code      int       `json:"code"`
+	Body      string    `json:"body"`
 
 	OK     bool   `json:"-"`
 	Bytes  []byte `json:"-"`
-	Status bool   `json:"-"`
+	Status bool   `json:"status"`
 
-	DNS          time.Duration
-	TLSHandshake time.Duration
-	Connect      time.Duration
-	TTFB         time.Duration
+	DNS          time.Duration `json:"DNS"`
+	TLSHandshake time.Duration `json:"TLS_handshake"`
+	Connect      time.Duration `json:"connect"`
+	TTFB         time.Duration `json:"TTFB"`
 }

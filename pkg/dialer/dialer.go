@@ -92,6 +92,7 @@ func (d *Dialer) call(ctx context.Context, h *types.Host) (response types.HttpRe
 	if len(b) < 1024 {
 		response.Bytes = b
 	}
+	response.Timestamp = time.Now()
 	response.OK = true
 
 	return

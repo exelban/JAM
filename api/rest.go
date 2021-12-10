@@ -7,9 +7,10 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/pkgz/rest"
-	"html/template"
-	"log"
+	"io/fs"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -27,14 +28,11 @@ type Auth struct {
 }
 
 type Rest struct {
-	Monitor  monitor
-	Version  string
-	Live     bool
-	Template *template.Template
-	Auth     Auth
+	Monitor monitor
+	Version string
+	FS      fs.FS
+	Auth    Auth
 }
-
-var indexPath = "index.html"
 
 func (s *Rest) Router() chi.Router {
 	router := chi.NewRouter()
@@ -59,33 +57,11 @@ func (s *Rest) Router() chi.Router {
 	router.NotFound(rest.NotFound)
 	router.Use(s.basicAuth)
 
-	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		tmpl := s.Template
-		if s.Live {
-			t, err := template.ParseFiles(indexPath)
-			if err != nil {
-				log.Printf("[ERROR] parse html %v", err)
-				rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, err.Error())
-				return
-			}
-			tmpl = t
-		}
+	router.HandleFunc("/admin", s.admin)
+	router.HandleFunc("/admin/*", s.admin)
 
-		items := struct {
-			Version string
-			List    []types.Service
-		}{
-			Version: s.Version,
-			List:    s.Monitor.Services(),
-		}
-
-		if err := tmpl.Execute(w, items); err != nil {
-			log.Printf("[ERROR] render html %v", err)
-			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, err.Error())
-		}
-	})
-	router.Get("/status", func(w http.ResponseWriter, r *http.Request) {
-		rest.JsonResponse(w, s.Monitor.Status())
+	router.Get("/list", func(w http.ResponseWriter, r *http.Request) {
+		rest.JsonResponse(w, s.Monitor.Services())
 	})
 
 	return router
@@ -107,4 +83,18 @@ func (s *Rest) basicAuth(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Rest) admin(w http.ResponseWriter, r *http.Request) {
+	p := strings.Replace(r.URL.Path, "/admin/", "/admin/dist/", 1)
+	rp := strings.Replace(r.URL.RawPath, "/admin/", "/admin/dist/", 1)
+
+	r2 := new(http.Request)
+	*r2 = *r
+	r2.URL = new(url.URL)
+	*r2.URL = *r.URL
+	r2.URL.Path = p
+	r2.URL.RawPath = rp
+
+	http.FileServer(http.FS(s.FS)).ServeHTTP(w, r2)
 }

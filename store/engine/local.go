@@ -18,6 +18,10 @@ type Local struct {
 func NewLocal(limits *types.HistoryCounts) *Local {
 	return &Local{
 		limits: limits,
+
+		checks:  []types.HttpResponse{},
+		success: []types.HttpResponse{},
+		failure: []types.HttpResponse{},
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pkgz/rest"
 	"github.com/pkgz/service"
-	"html/template"
 	"log"
 	"os"
 )
@@ -35,8 +34,8 @@ type app struct {
 	srv *rest.Server
 }
 
-//go:embed index.html
-var indexHTML embed.FS
+//go:embed admin/dist/*
+var fs embed.FS
 
 const version = "v0.0.0"
 
@@ -82,11 +81,6 @@ func New(ctx context.Context, args args) (*app, error) {
 		return nil, err
 	}
 
-	indexHTMLTemplate, err := template.ParseFS(indexHTML, "index.html")
-	if err != nil {
-		return nil, errors.Wrap(err, "parse index.html")
-	}
-
 	monitor_ := &monitor.Monitor{}
 
 	return &app{
@@ -95,10 +89,9 @@ func New(ctx context.Context, args args) (*app, error) {
 		config:  cfg,
 		monitor: monitor_,
 		api: &api.Rest{
-			Monitor:  monitor_,
-			Version:  version,
-			Live:     false,
-			Template: indexHTMLTemplate,
+			Monitor: monitor_,
+			Version: version,
+			FS:      fs,
 			Auth: api.Auth{
 				Enabled:  args.Auth,
 				Username: args.Username,

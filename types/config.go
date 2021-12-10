@@ -14,7 +14,6 @@ import (
 )
 
 type Slack struct {
-	URL     string `json:"url" yaml:"url"`
 	Channel string `json:"channel" yaml:"channel"`
 	Token   string `json:"token" yaml:"token"`
 }
