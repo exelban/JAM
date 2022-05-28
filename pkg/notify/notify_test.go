@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"context"
 	"errors"
 	"github.com/exelban/cheks/types"
 	"github.com/stretchr/testify/require"
@@ -10,12 +11,12 @@ import (
 
 func TestNew(t *testing.T) {
 	t.Run("no providers", func(t *testing.T) {
-		n, err := New(&types.Cfg{})
+		n, err := New(context.Background(), &types.Cfg{})
 		require.NoError(t, err)
 		require.Empty(t, n.clients)
 	})
 	t.Run("init slack", func(t *testing.T) {
-		n, err := New(&types.Cfg{
+		n, err := New(context.Background(), &types.Cfg{
 			Alerts: types.Alerts{
 				Slack: &types.Slack{
 					Channel: "test",

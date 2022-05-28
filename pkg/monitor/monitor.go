@@ -6,7 +6,9 @@ import (
 	"github.com/exelban/cheks/pkg/notify"
 	"github.com/exelban/cheks/store"
 	"github.com/exelban/cheks/types"
+	"log"
 	"sync"
+	"time"
 )
 
 // Monitor - main service which track the hosts liveness
@@ -34,7 +36,7 @@ func (m *Monitor) Run(cfg *types.Cfg) error {
 
 		m.ctx = context.Background()
 		m.dialer = dialer.New(cfg.MaxConn)
-		n, err := notify.New(cfg)
+		n, err := notify.New(m.ctx, cfg)
 		if err != nil {
 			m.mu.Unlock()
 			return err
@@ -95,6 +97,8 @@ func (m *Monitor) Status() map[string]types.StatusType {
 func (m *Monitor) Services() []types.Service {
 	list := []types.Service{}
 
+	start := time.Now()
+
 	m.mu.RLock()
 	for _, w := range m.watchers {
 		w.mu.RLock()
@@ -122,6 +126,8 @@ func (m *Monitor) Services() []types.Service {
 		w.mu.RUnlock()
 	}
 	m.mu.RUnlock()
+
+	log.Printf("[INFO] services list: %v", time.Since(start))
 
 	return list
 }

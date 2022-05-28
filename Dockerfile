@@ -9,7 +9,7 @@ RUN yarn --silent
 COPY admin/ .
 RUN yarn build
 
-FROM exelban/baseimage:golang-1.17 as build-app
+FROM exelban/baseimage:golang-1.18 as build-app
 
 WORKDIR /app/
 COPY go.mod .

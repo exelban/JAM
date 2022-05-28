@@ -1,9 +1,10 @@
 package notify
 
 import (
+	"context"
 	"fmt"
 	"github.com/exelban/cheks/types"
-	"github.com/pkg/errors"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -21,8 +22,13 @@ type Notify struct {
 	mu sync.Mutex
 }
 
-func New(cfg *types.Cfg) (*Notify, error) {
+func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 	n := &Notify{}
+
+	if cfg.Alerts.InitializationMessage == nil {
+		t := true
+		cfg.Alerts.InitializationMessage = &t
+	}
 
 	if cfg.Alerts.Slack != nil {
 		slack := &Slack{
@@ -32,9 +38,57 @@ func New(cfg *types.Cfg) (*Notify, error) {
 			timeout: time.Second * 10,
 		}
 		n.clients = append(n.clients, slack)
-		if err := slack.send("I'm online"); err != nil {
-			return nil, errors.Wrap(err, "send up message")
+		log.Print("[INFO] Slack notifications enabled")
+	}
+	if cfg.Alerts.Telegram != nil {
+		telegram := &Telegram{
+			token:   cfg.Alerts.Telegram.Token,
+			chatIDs: cfg.Alerts.Telegram.ChatIDs,
 		}
+		n.clients = append(n.clients, telegram)
+		log.Print("[INFO] Telegram notifications enabled")
+	}
+
+	if *cfg.Alerts.InitializationMessage {
+		for _, client := range n.clients {
+			if err := client.send("I'm online"); err != nil {
+				return nil, fmt.Errorf("send up message: %w", err)
+			}
+		}
+	}
+
+	if cfg.LivenessInterval != "" {
+		log.Printf("[INFO] Liveness interval is enabled every %s", cfg.LivenessInterval)
+
+		duration, err := time.ParseDuration(cfg.LivenessInterval)
+		if err != nil {
+			return nil, fmt.Errorf("parse liveness interval: %w", err)
+		}
+		tk := time.NewTicker(duration)
+
+		go func() {
+		loop:
+			for {
+				select {
+				case <-tk.C:
+					for _, client := range n.clients {
+						if err := client.send("Liveness check"); err != nil {
+							log.Printf("[ERROR] Liveness check: %s", err)
+						}
+					}
+				case <-ctx.Done():
+					tk.Stop()
+					if cfg.Alerts.ShutdownMessage {
+						for _, client := range n.clients {
+							if err := client.send("Going offline..."); err != nil {
+								log.Printf("[ERROR] send shutdown message: %s", err)
+							}
+						}
+					}
+					break loop
+				}
+			}
+		}()
 	}
 
 	return n, nil

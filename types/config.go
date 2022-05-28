@@ -3,8 +3,8 @@ package types
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -18,8 +18,17 @@ type Slack struct {
 	Token   string `json:"token" yaml:"token"`
 }
 
+type Telegram struct {
+	Token   string   `json:"token" yaml:"token"`
+	ChatIDs []string `json:"chatIDs" yaml:"chatIDs"`
+}
+
 type Alerts struct {
-	Slack *Slack `json:"slack" yaml:"slack"`
+	Slack    *Slack    `json:"slack" yaml:"slack"`
+	Telegram *Telegram `json:"telegram" yaml:"telegram"`
+
+	InitializationMessage *bool `json:"initializationMessage" yaml:"initializationMessage"`
+	ShutdownMessage       bool  `json:"shutdownMessage" yaml:"shutdownMessage"`
 }
 
 type Cfg struct {
@@ -28,6 +37,7 @@ type Cfg struct {
 	Retry            string `json:"retry" yaml:"retry"`
 	Timeout          string `json:"timeout" yaml:"timeout"`
 	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
+	LivenessInterval string `json:"livenessInterval" yaml:"livenessInterval"`
 	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
 	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
 
@@ -176,19 +186,19 @@ func (c *Cfg) Validate() error {
 
 		retryInterval, err := time.ParseDuration(c.Hosts[i].Retry)
 		if err != nil {
-			return errors.Wrap(err, "retry interval")
+			return fmt.Errorf("retry interval: %w", err)
 		}
 		c.Hosts[i].RetryInterval = retryInterval
 
 		timeoutInterval, err := time.ParseDuration(c.Hosts[i].Timeout)
 		if err != nil {
-			return errors.Wrap(err, "timeout interval")
+			return fmt.Errorf("timeout interval: %w", err)
 		}
 		c.Hosts[i].TimeoutInterval = timeoutInterval
 
 		initialDelayInterval, err := time.ParseDuration(c.Hosts[i].InitialDelay)
 		if err != nil {
-			return errors.Wrap(err, "initial delay interval")
+			return fmt.Errorf("initial delay interval: %w", err)
 		}
 		c.Hosts[i].InitialDelayInterval = initialDelayInterval
 

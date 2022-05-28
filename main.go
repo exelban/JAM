@@ -4,10 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"embed"
+	"errors"
+	"fmt"
 	"github.com/exelban/cheks/api"
 	"github.com/exelban/cheks/pkg/monitor"
 	"github.com/exelban/cheks/types"
-	"github.com/pkg/errors"
 	"github.com/pkgz/rest"
 	"github.com/pkgz/service"
 	"log"
@@ -114,13 +115,13 @@ func (a *app) run(ctx context.Context) error {
 		select {
 		case <-a.config.FW:
 			if err := a.config.Parse(); err != nil {
-				return errors.Wrap(err, "parse config")
+				return fmt.Errorf("parse config: %w", err)
 			}
 			if err := a.config.Validate(); err != nil {
-				return errors.Wrap(err, "validate config")
+				return fmt.Errorf("validate config: %w", err)
 			}
 			if err := a.monitor.Run(a.config); err != nil {
-				return errors.Wrap(err, "reload watcher on config updates")
+				return fmt.Errorf("reload watcher on config updates: %w", err)
 			}
 		case <-ctx.Done():
 			log.Print("[DEBUG] terminating...")
