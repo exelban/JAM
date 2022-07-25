@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,8 @@ type HistoryCounts struct {
 
 // Host - host structure
 type Host struct {
+	Type HostType `json:"-" yaml:"-"`
+
 	Name string   `json:"name" yaml:"name"`
 	Tags []string `json:"tags" yaml:"tags"`
 
@@ -69,4 +72,12 @@ func (h *Host) String() string {
 // Hash - returns some unique string per host (name + url)
 func (h *Host) Hash() string {
 	return fmt.Sprintf("%s_%s", h.Name, h.URL)
+}
+
+// GetType - return a host type based on url
+func (h *Host) GetType() HostType {
+	if strings.HasPrefix(h.URL, "mongodb://") {
+		return MongoType
+	}
+	return HttpType
 }

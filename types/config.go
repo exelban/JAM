@@ -158,6 +158,8 @@ func (c *Cfg) Validate() error {
 	}
 
 	for i, host := range c.Hosts {
+		c.Hosts[i].Type = host.GetType()
+
 		if host.URL == "" {
 			return fmt.Errorf("no url for %s", host.Name)
 		}
@@ -218,8 +220,8 @@ func (c *Cfg) Validate() error {
 			}
 		}
 
-		log.Printf("[DEBUG] Name=%s, URL=%s, InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
-			c.Hosts[i].Name, c.Hosts[i].URL, c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval,
+		log.Printf("[DEBUG] Name=%s, URL=%s, Type=%s, InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
+			c.Hosts[i].Name, c.Hosts[i].URL, c.Hosts[i].Type, c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval,
 			c.Hosts[i].TimeoutInterval, c.Hosts[i].Success.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold)
 	}
 

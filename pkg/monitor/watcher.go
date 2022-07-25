@@ -53,18 +53,17 @@ func (w *watcher) run() {
 
 // check - call to the host and check host status
 func (w *watcher) check() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	resp := w.dialer.Dial(w.ctx, &w.host)
 	if !resp.OK {
 		return
 	}
+
+	w.mu.Lock()
 	resp.Status = w.host.Status(resp.Code, resp.Bytes)
 	w.lastCheck = time.Now()
-
 	w.history.Add(resp)
 	w.validate()
+	w.mu.Unlock()
 
 	log.Printf("[DEBUG] %s: %s status (last: %v)", w.host.String(), w.status, resp.Status)
 }

@@ -51,3 +51,10 @@ type HttpResponse struct {
 	Connect      time.Duration `json:"connect"`
 	TTFB         time.Duration `json:"TTFB"`
 }
+
+type HostType string
+
+var (
+	HttpType  HostType = "http"
+	MongoType HostType = "mongo"
+)

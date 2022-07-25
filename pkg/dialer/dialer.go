@@ -3,12 +3,17 @@ package dialer
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"github.com/exelban/cheks/types"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httptrace"
+	"strings"
 	"time"
 )
 
@@ -33,13 +38,18 @@ func (d *Dialer) Dial(ctx context.Context, h *types.Host) types.HttpResponse {
 
 	resp := make(chan types.HttpResponse, 1)
 	go func() {
-		resp <- d.call(ctx, h)
+		switch h.Type {
+		case types.MongoType:
+			resp <- d.mongoCall(ctx, h)
+		default:
+			resp <- d.httpCall(ctx, h)
+		}
 	}()
 
 	return <-resp
 }
 
-func (d *Dialer) call(ctx context.Context, h *types.Host) (response types.HttpResponse) {
+func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.HttpResponse) {
 	req, err := http.NewRequest(h.Method, h.URL, nil)
 	if err != nil {
 		log.Printf("[ERROR] prepare request %v", err)
@@ -94,6 +104,59 @@ func (d *Dialer) call(ctx context.Context, h *types.Host) (response types.HttpRe
 	}
 	response.Timestamp = time.Now()
 	response.OK = true
+
+	return
+}
+
+func (d *Dialer) mongoCall(ctx context.Context, h *types.Host) (response types.HttpResponse) {
+	ctx_, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(ctx_, options.Client().ApplyURI(h.URL))
+	defer func() {
+		if err = client.Disconnect(ctx_); err != nil {
+			log.Printf("[ERROR] disconnect mongo %v", err)
+		}
+	}()
+
+	response.Timestamp = time.Now()
+	response.OK = true
+
+	ctx_, cancel = context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if err := client.Ping(ctx_, nil); err != nil {
+		log.Printf("[ERROR] ping mongo %v", err)
+		response.Body = err.Error()
+		response.Code = 501
+		return
+	}
+
+	type MongoMetaData struct {
+		Set     string `bson:"set"`
+		RSState int64  `bson:"myState"`
+	}
+	mongoMetaData := MongoMetaData{}
+	db := client.Database("admin")
+
+	err = db.RunCommand(nil, bsonx.Doc{{"replSetGetStatus", bsonx.Int32(1)}}).Decode(&mongoMetaData)
+	if err != nil {
+		if strings.Contains(err.Error(), "NoReplicationEnabled") && strings.Contains(h.URL, "replicaSet") {
+			response.Code = 502
+			response.Body = err.Error()
+			return
+		} else if !strings.Contains(err.Error(), "NoReplicationEnabled") {
+			response.Body = err.Error()
+			response.Code = 503
+			return
+		}
+	}
+
+	if mongoMetaData.Set != "" && mongoMetaData.RSState != 1 {
+		response.Code = 500
+		response.Body = fmt.Sprintf("mongo rs is not in correct state: %s", mongoMetaData.Set)
+		return
+	}
+
+	response.Code = 200
 
 	return
 }
