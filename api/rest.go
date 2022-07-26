@@ -57,8 +57,8 @@ func (s *Rest) Router() chi.Router {
 	router.NotFound(rest.NotFound)
 	router.Use(s.basicAuth)
 
-	router.HandleFunc("/admin", s.admin)
-	router.HandleFunc("/admin/*", s.admin)
+	router.HandleFunc("/", s.admin)
+	router.HandleFunc("/*", s.admin)
 
 	router.Get("/list", func(w http.ResponseWriter, r *http.Request) {
 		rest.JsonResponse(w, s.Monitor.Services())
@@ -86,8 +86,8 @@ func (s *Rest) basicAuth(next http.Handler) http.Handler {
 }
 
 func (s *Rest) admin(w http.ResponseWriter, r *http.Request) {
-	p := strings.Replace(r.URL.Path, "/admin/", "/admin/dist/", 1)
-	rp := strings.Replace(r.URL.RawPath, "/admin/", "/admin/dist/", 1)
+	p := strings.Replace(r.URL.Path, "/", "/admin/dist/", 1)
+	rp := strings.Replace(r.URL.RawPath, "/", "/admin/dist/", 1)
 
 	r2 := new(http.Request)
 	*r2 = *r
