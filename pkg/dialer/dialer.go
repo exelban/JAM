@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/bsonx"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -94,7 +94,7 @@ func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.Ht
 	}
 	response.Code = resp.StatusCode
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("[ERROR] read body %v", err)
 		return

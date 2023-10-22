@@ -15,7 +15,10 @@ const (
 
 // Service - structure for API
 type Service struct {
+	ID string `json:"id"`
+
 	Name   string `json:"name"`
+	Host   string `json:"host"`
 	Tags   []Tag  `json:"tags"`
 	Status Status `json:"status"`
 
