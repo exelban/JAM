@@ -3,7 +3,7 @@ package notify
 import (
 	"context"
 	"fmt"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/types"
 	"log"
 	"strings"
 	"sync"

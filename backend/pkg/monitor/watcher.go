@@ -2,11 +2,11 @@ package monitor
 
 import (
 	"context"
-	"github.com/exelban/cheks/pkg/dialer"
-	"github.com/exelban/cheks/pkg/notify"
-	"github.com/exelban/cheks/store"
-	"github.com/exelban/cheks/store/engine"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/pkg/dialer"
+	"github.com/exelban/uptime/pkg/notify"
+	"github.com/exelban/uptime/store"
+	"github.com/exelban/uptime/store/engine"
+	"github.com/exelban/uptime/types"
 	"log"
 	"sync"
 	"time"

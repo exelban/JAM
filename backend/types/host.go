@@ -22,6 +22,7 @@ type HistoryCounts struct {
 
 // Host - host structure
 type Host struct {
+	ID   string   `json:"id" yaml:"id"`
 	Type HostType `json:"-" yaml:"-"`
 
 	Name string   `json:"name" yaml:"name"`

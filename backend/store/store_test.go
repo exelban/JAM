@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/types"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

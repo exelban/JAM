@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/types"
 	"sync"
 )
 

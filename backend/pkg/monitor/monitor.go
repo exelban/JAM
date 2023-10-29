@@ -2,10 +2,10 @@ package monitor
 
 import (
 	"context"
-	"github.com/exelban/cheks/pkg/dialer"
-	"github.com/exelban/cheks/pkg/notify"
-	"github.com/exelban/cheks/store"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/pkg/dialer"
+	"github.com/exelban/uptime/pkg/notify"
+	"github.com/exelban/uptime/store"
+	"github.com/exelban/uptime/types"
 	"log"
 	"sync"
 	"time"
@@ -110,7 +110,6 @@ func (m *Monitor) Services() []types.Service {
 					Color: m.tagsColors[tag],
 				})
 			}
-
 			list = append(list, types.Service{
 				Name: w.host.String(),
 				Status: types.Status{

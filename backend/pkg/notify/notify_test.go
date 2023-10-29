@@ -3,7 +3,7 @@ package notify
 import (
 	"context"
 	"errors"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/types"
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"

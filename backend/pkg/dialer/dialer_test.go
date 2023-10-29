@@ -2,7 +2,7 @@ package dialer
 
 import (
 	"context"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/pkgz/rest"
 	"github.com/stretchr/testify/require"

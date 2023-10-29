@@ -2,14 +2,21 @@ package api
 
 import (
 	"context"
+	"github.com/exelban/uptime/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/pkgz/rest"
+	"net/http"
 	"time"
 )
 
+type monitor interface {
+	Services() []types.Service
+}
+
 type Rest struct {
+	Monitor monitor
 }
 
 func (s *Rest) Router(ctx context.Context) chi.Router {
@@ -32,6 +39,10 @@ func (s *Rest) Router(ctx context.Context) chi.Router {
 
 	router.Use(rest.Logger)
 	router.NotFound(rest.NotFound)
+
+	router.Get("/list", func(w http.ResponseWriter, r *http.Request) {
+		rest.JsonResponse(w, s.Monitor.Services())
+	})
 
 	return router
 }

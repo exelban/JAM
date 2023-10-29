@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -95,7 +95,7 @@ func (c *Cfg) Parse() error {
 		_ = file.Close()
 	}()
 
-	bytes, err := ioutil.ReadAll(file)
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}

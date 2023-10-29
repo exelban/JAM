@@ -2,8 +2,8 @@ package store
 
 import (
 	"errors"
-	"github.com/exelban/cheks/store/engine"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/uptime/store/engine"
+	"github.com/exelban/uptime/types"
 )
 
 type Store interface {
