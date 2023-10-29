@@ -50,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	app, err := New(ctx, args)
+	app, err := create(ctx, args)
 	if err != nil {
 		log.Printf("[ERROR] setup application failed: %+v", err)
 		os.Exit(2)
@@ -66,7 +66,7 @@ func main() {
 	log.Print("[INFO] application terminated")
 }
 
-func New(ctx context.Context, args args) (*app, error) {
+func create(ctx context.Context, args args) (*app, error) {
 	if args.Auth {
 		if args.Username == "" {
 			return nil, errors.New("username cannot be empty when AUTH is true")
