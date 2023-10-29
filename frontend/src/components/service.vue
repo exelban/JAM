@@ -11,7 +11,7 @@
         <span class="host">{{ value.host }}</span>
       </div>
     </td>
-    <td style="cursor: pointer;" @click="toggleDetails()"><span class="availability">100%</span></td>
+    <td style="cursor: pointer;" @click="toggleDetails()"><span class="availability">{{availability}}%</span></td>
     <td style="padding:0;">
       <div :style="{height: chartHeight}">
         <Line :data="data" :options="options"/>
@@ -26,7 +26,7 @@
   <tr>
     <td colspan="5" style="padding: 4px 10px;">
       <div :ref="value.id" class="statusChart column wrap border-rounded">
-        <span v-for="p in uptime" :class="p.status" :uk-tooltip="p.status"></span>
+        <span v-for="p in uptime" :class="p.status ? 'up' : 'down'" :uk-tooltip="p.status ? 'UP' : 'Down'"></span>
       </div>
     </td>
   </tr>
@@ -166,6 +166,10 @@ export default {
         }
       }
       return list
+    },
+    availability() {
+      const okChecks = this.value.checks.filter(c => c.status).length
+      return parseInt(okChecks*100/this.value.checks.length)
     }
   },
   methods: {

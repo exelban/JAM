@@ -63,75 +63,18 @@ import service from "@/components/service.vue"
 export default {
   name: "list",
   components: {"c-service": service},
+  props: ["services"],
   data: () => ({
     filter: {
       status: "",
       tags: [],
     },
-    items: [
-      {
-        id: "1",
-        name: "Name 1",
-        host: "host",
-        status: {
-          value: "up",
-          timestamp: "2020-01-01 00:00:00"
-        },
-        tags: [
-          {
-            name: "tag",
-            color: "#00c853"
-          },
-          {
-            name: "tag2",
-            color: "#137de7"
-          },
-          {
-            name: "tag3",
-            color: "#c748b5"
-          }
-        ],
-        checks: [
-          {status: "up"},
-          {status: "down"},
-          {status: "up"},
-          {status: "up"},
-          {status: "up"}
-        ]
-      },
-      {
-        id: "2",
-        name: "Name 2",
-        host: "host",
-        status: {
-          value: "up",
-          timestamp: "2020-01-01 00:00:00"
-        },
-        tags: [
-          {
-            name: "tag2",
-            color: "#137de7"
-          },
-          {
-            name: "tag3",
-            color: "#c748b5"
-          }
-        ],
-        checks: [
-          {status: "up"},
-          {status: "down"},
-          {status: "up"},
-          {status: "up"},
-          {status: "up"}
-        ]
-      }
-    ]
   }),
   computed: {
     list() {
-      let list = this.items
+      let list = this.services
       if (this.filter.status) {
-        list = this.items.filter(item => item.status.value === this.filter.status)
+        list = this.services.filter(item => item.status.value === this.filter.status)
       }
       if (this.filter.tags.length > 0) {
         list = list.filter(item => {
@@ -153,10 +96,10 @@ export default {
       return tags
     },
     upCount() {
-      return this.items.filter(item => item.status.value === "up").length
+      return this.services.filter(item => item.status.value === "up").length
     },
     downCount() {
-      return this.items.filter(item => item.status.value === "down").length
+      return this.services.filter(item => item.status.value === "down").length
     },
   },
   methods: {
@@ -224,8 +167,11 @@ main {
         }
       }
     }
-    tbody:nth-child(odd) {
+    tbody {
       border-top: solid var(--muted-color) 1px;
+      &:first-child {
+        border-top: none;
+      }
     }
   }
 
