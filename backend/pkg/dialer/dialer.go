@@ -87,11 +87,13 @@ func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.Ht
 		Timeout: h.TimeoutInterval,
 	}
 
+	startTime := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] make request %v", err)
 		return
 	}
+	response.Time = time.Since(startTime).Milliseconds()
 	response.Code = resp.StatusCode
 
 	b, err := io.ReadAll(resp.Body)

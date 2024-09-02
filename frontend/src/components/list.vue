@@ -1,5 +1,5 @@
 <template>
-  <main class="p-small">
+  <header class="p-small row between">
     <div class="filters row middle">
       <fa :icon="['fas', 'filter']" class="mh-5"/>
       <span class="title">Filter: </span>
@@ -41,29 +41,32 @@
           </span>
       </div>
     </div>
+    <button class="uk-button uk-button-small uk-button-primary shadow-normal border-rounded mv-2" uk-toggle="target: #edit-target-dialog">Add target</button>
+  </header>
 
+  <main class="p-small">
     <table class="list shadow-normal border-rounded uk-background-primary mt-5 uk-table uk-table-middle">
       <thead class="head">
       <tr>
         <th style="width: 20px;"></th>
         <th class="uk-width-small">Check</th>
         <th class="uk-width-small">Availability</th>
-        <th class="uk-width-large" style="text-align: center;">Response time</th>
+        <th class="uk-width-large responseTimeColumn" style="text-align: center;">Response time</th>
         <th class="uk-width-small" style="text-align: right;">Tags</th>
       </tr>
       </thead>
-      <c-service v-for="c in list" :value="c" @filter-by-tag="filterByTag"/>
+      <c-target v-for="t in list" :target="t" @filter-by-tag="filterByTag"/>
     </table>
   </main>
 </template>
 
 <script>
-import service from "@/components/service.vue"
+import target from "@/components/row.vue"
 
 export default {
   name: "list",
-  components: {"c-service": service},
-  props: ["services"],
+  components: {"c-target": target},
+  props: ["targets"],
   data: () => ({
     filter: {
       status: "",
@@ -72,9 +75,9 @@ export default {
   }),
   computed: {
     list() {
-      let list = this.services
+      let list = this.targets
       if (this.filter.status) {
-        list = this.services.filter(item => item.status.value === this.filter.status)
+        list = this.targets.filter(item => item.status.value === this.filter.status)
       }
       if (this.filter.tags.length > 0) {
         list = list.filter(item => {
@@ -96,10 +99,10 @@ export default {
       return tags
     },
     upCount() {
-      return this.services.filter(item => item.status.value === "up").length
+      return this.targets.filter(item => item.status.value === "up").length
     },
     downCount() {
-      return this.services.filter(item => item.status.value === "down").length
+      return this.targets.filter(item => item.status.value === "down").length
     },
   },
   methods: {
@@ -126,11 +129,10 @@ export default {
 <style lang="scss">
 @import "@/style.scss";
 
-main {
-  flex: 1;
-  .filters {
-    height: 40px;
+header {
+  height: 40px;
 
+  .filters {
     .statuses {
       background: var(--default-color);
     }
@@ -152,6 +154,10 @@ main {
       }
     }
   }
+}
+
+main {
+  padding-top: 0 !important;
 
   .list {
     background: var(--default-color);
@@ -174,10 +180,16 @@ main {
       }
     }
   }
+}
 
-  .tag {
-    margin: 1px;
-    cursor: pointer;
+.tag {
+  margin: 1px;
+  cursor: pointer;
+}
+
+.responseTimeColumn {
+  @media (max-width: 768px) {
+    display: none;
   }
 }
 </style>

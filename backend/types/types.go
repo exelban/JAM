@@ -15,12 +15,10 @@ const (
 
 // Service - structure for API
 type Service struct {
-	ID string `json:"id"`
-
-	Name   string `json:"name"`
-	Host   string `json:"host"`
-	Tags   []Tag  `json:"tags"`
+	ID     string `json:"id"`
 	Status Status `json:"status"`
+
+	Tags []Tag `json:"tags"`
 
 	Checks  []HttpResponse `json:"checks"`
 	Success []HttpResponse `json:"success"`
@@ -42,6 +40,7 @@ type Status struct {
 // HttpResponse - response from the http dial
 type HttpResponse struct {
 	Timestamp time.Time `json:"timestamp"`
+	Time      int64     `json:"time"`
 	Code      int       `json:"code"`
 	Body      string    `json:"body"`
 

@@ -111,12 +111,12 @@ func (m *Monitor) Services() []types.Service {
 				})
 			}
 			list = append(list, types.Service{
-				Name: w.host.String(),
+				ID:   w.host.ID,
+				Tags: tags,
 				Status: types.Status{
 					Value:     w.status,
 					Timestamp: w.lastCheck,
 				},
-				Tags:    tags,
 				Checks:  w.history.Checks(),
 				Success: w.history.Success(),
 				Failure: w.history.Failure(),

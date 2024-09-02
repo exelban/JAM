@@ -18,6 +18,7 @@ $default-spacing: 2px;
 
   --up-color: #00c853;
   --down-color: #f85c5c;
+  --unknown-color: #666666;
 }
 
 body.dark {
@@ -55,6 +56,16 @@ html, body {
   width: 100%;
   height: 100%;
 }
+main {
+  flex: 1;
+}
+
+footer > a {
+  color: #5e5e5e;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+}
 
 .pointer { cursor: pointer; }
 
@@ -73,21 +84,21 @@ html, body {
 .nowrap { flex-wrap: nowrap; }
 
 @for $i from 0 through 16 {
-  .p-#{$i}  { padding: calc($default-spacing * $i) !important; }
-  .pv-#{$i} { padding-top: calc($default-spacing * $i) !important; padding-bottom: calc($default-spacing * $i) !important; }
-  .ph-#{$i} { padding-left: calc($default-spacing * $i) !important; padding-right: calc($default-spacing * $i) !important; }
-  .pt-#{$i} { padding-top: calc($default-spacing * $i) !important; }
-  .pr-#{$i} { padding-right: calc($default-spacing * $i) !important; }
-  .pb-#{$i} { padding-bottom: calc($default-spacing * $i) !important; }
-  .pl-#{$i} { padding-left: calc($default-spacing * $i) !important; }
+  .p-#{$i}  { padding: calc($default-spacing * $i); }
+  .pv-#{$i} { padding-top: calc($default-spacing * $i); padding-bottom: calc($default-spacing * $i); }
+  .ph-#{$i} { padding-left: calc($default-spacing * $i); padding-right: calc($default-spacing * $i); }
+  .pt-#{$i} { padding-top: calc($default-spacing * $i); }
+  .pr-#{$i} { padding-right: calc($default-spacing * $i); }
+  .pb-#{$i} { padding-bottom: calc($default-spacing * $i); }
+  .pl-#{$i} { padding-left: calc($default-spacing * $i); }
 
-  .m-#{$i}  { margin: calc($default-spacing * $i) !important; }
-  .mv-#{$i} { margin-top: calc($default-spacing * $i) !important; margin-bottom: calc($default-spacing * $i) !important; }
-  .mh-#{$i} { margin-left: calc($default-spacing* $i)  !important; margin-right: calc($default-spacing * $i) !important; }
-  .mt-#{$i} { margin-top: calc($default-spacing * $i) !important; }
-  .mr-#{$i} { margin-right: calc($default-spacing * $i) !important; }
-  .mb-#{$i} { margin-bottom: calc($default-spacing * $i) !important; }
-  .ml-#{$i} { margin-left: calc($default-spacing * $i) !important; }
+  .m-#{$i}  { margin: calc($default-spacing * $i); }
+  .mv-#{$i} { margin-top: calc($default-spacing * $i); margin-bottom: calc($default-spacing * $i); }
+  .mh-#{$i} { margin-left: calc($default-spacing* $i); margin-right: calc($default-spacing * $i); }
+  .mt-#{$i} { margin-top: calc($default-spacing * $i); }
+  .mr-#{$i} { margin-right: calc($default-spacing * $i); }
+  .mb-#{$i} { margin-bottom: calc($default-spacing * $i); }
+  .ml-#{$i} { margin-left: calc($default-spacing * $i); }
 
   .basis-#{$i} { flex-basis: calc($i / 16 * 100%); }
 }

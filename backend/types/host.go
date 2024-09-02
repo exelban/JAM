@@ -23,23 +23,23 @@ type HistoryCounts struct {
 // Host - host structure
 type Host struct {
 	ID   string   `json:"id" yaml:"id"`
-	Type HostType `json:"-" yaml:"-"`
+	Type HostType `json:"type" yaml:"-"`
 
 	Name string   `json:"name" yaml:"name"`
-	Tags []string `json:"tags" yaml:"tags"`
+	Tags []string `json:"-" yaml:"tags,omitempty"`
 
 	Method string `json:"method" yaml:"method"`
 	URL    string `json:"url" yaml:"url"`
 
-	Retry            string `json:"retry" yaml:"retry"`
-	Timeout          string `json:"timeout" yaml:"timeout"`
-	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
-	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
+	Retry            string `json:"retry" yaml:"retry,omitempty"`
+	Timeout          string `json:"timeout" yaml:"timeout,omitempty"`
+	InitialDelay     string `json:"initialDelay" yaml:"initialDelay,omitempty"`
+	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold,omitempty"`
+	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold,omitempty"`
 
-	Success *Success          `json:"success" yaml:"success"`
-	History *HistoryCounts    `json:"history" yaml:"history"`
-	Headers map[string]string `json:"headers" yaml:"headers"`
+	Success *Success          `json:"success,omitempty" yaml:"success,omitempty"`
+	History *HistoryCounts    `json:"history,omitempty" yaml:"history,omitempty"`
+	Headers map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 
 	RetryInterval        time.Duration `json:"-" yaml:"-"`
 	TimeoutInterval      time.Duration `json:"-" yaml:"-"`

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"github.com/exelban/uptime/api"
 	"github.com/exelban/uptime/pkg/monitor"
@@ -27,6 +28,9 @@ type app struct {
 
 	args args
 }
+
+//go:embed ui/*
+var fs embed.FS
 
 const version = "v0.0.0"
 
@@ -66,7 +70,9 @@ func create(ctx context.Context, args args) (*app, error) {
 		srv: rest.NewServer(args.Port),
 
 		api: &api.Rest{
+			FS:      fs,
 			Monitor: mtr,
+			Config:  cfg,
 		},
 		config:  cfg,
 		monitor: mtr,

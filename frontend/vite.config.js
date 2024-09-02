@@ -4,8 +4,9 @@ import vue from "@vitejs/plugin-vue"
 import { fileURLToPath, URL } from "node:url"
 
 export default defineConfig({
+  base: "/ui/",
   build: {
-    target: 'esnext'
+    target: "esnext"
   },
   plugins: [vue()],
   resolve: {

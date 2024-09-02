@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lithammer/shortuuid/v4"
 	"gopkg.in/yaml.v2"
 	"io"
 	"log"
@@ -32,30 +33,36 @@ type Alerts struct {
 }
 
 type Cfg struct {
-	MaxConn int `json:"maxConn" yaml:"maxConn"`
+	MaxConn int `json:"maxConn" yaml:"maxConn,omitempty"`
 
-	Retry            string `json:"retry" yaml:"retry"`
-	Timeout          string `json:"timeout" yaml:"timeout"`
-	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
-	LivenessInterval string `json:"livenessInterval" yaml:"livenessInterval"`
-	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
+	Retry            string `json:"retry" yaml:"retry,omitempty"`
+	Timeout          string `json:"timeout" yaml:"timeout,omitempty"`
+	InitialDelay     string `json:"initialDelay" yaml:"initialDelay,omitempty"`
+	LivenessInterval string `json:"livenessInterval" yaml:"livenessInterval,omitempty"`
+	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold,omitempty"`
+	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold,omitempty"`
 
-	Success *Success          `json:"success" yaml:"success"`
-	History *HistoryCounts    `json:"history" yaml:"history"`
-	Headers map[string]string `json:"headers" yaml:"headers"`
+	Success *Success          `json:"success" yaml:"success,omitempty"`
+	History *HistoryCounts    `json:"history" yaml:"history,omitempty"`
+	Headers map[string]string `json:"headers" yaml:"headers,omitempty"`
 
-	Hosts  []Host `json:"hosts" yaml:"hosts"`
-	Alerts Alerts `json:"alerts" yaml:"alerts"`
+	Hosts  []Host `json:"hosts" yaml:"hosts,omitempty"`
+	Alerts Alerts `json:"alerts" yaml:"alerts,omitempty"`
 
-	path string
-	FW   chan bool
+	path string    `yaml:"-"`
+	FW   chan bool `yaml:"-"`
 }
 
 func NewConfig(ctx context.Context, path string) (*Cfg, error) {
 	cfg := &Cfg{
 		path: path,
 		FW:   make(chan bool),
+	}
+
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		if err := cfg.save(); err != nil {
+			return nil, fmt.Errorf("save config: %w", err)
+		}
 	}
 
 	go func() {
@@ -113,10 +120,6 @@ func (c *Cfg) Parse() error {
 
 // Validate - trying to guess if host is API or Server, also set default timeout and retry values
 func (c *Cfg) Validate() error {
-	if len(c.Hosts) == 0 {
-		return errors.New("no hosts for monitoring")
-	}
-
 	if c.MaxConn == 0 {
 		c.MaxConn = 128
 	}
@@ -158,6 +161,12 @@ func (c *Cfg) Validate() error {
 	}
 
 	for i, host := range c.Hosts {
+		c.Hosts[i].ID = shortuuid.New()
+		if host.ID != "" {
+			c.Hosts[i].ID = host.ID
+		} else {
+			c.Hosts[i].ID = shortuuid.New()
+		}
 		c.Hosts[i].Type = host.GetType()
 
 		if host.URL == "" {
@@ -220,9 +229,69 @@ func (c *Cfg) Validate() error {
 			}
 		}
 
-		log.Printf("[DEBUG] Name=%s, URL=%s, Type=%s, InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
-			c.Hosts[i].Name, c.Hosts[i].URL, c.Hosts[i].Type, c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval,
+		log.Printf("[DEBUG] ID=%s Name=%s, URL=%s, Type=%s, InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
+			c.Hosts[i].ID, c.Hosts[i].Name, c.Hosts[i].URL, c.Hosts[i].Type, c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval,
 			c.Hosts[i].TimeoutInterval, c.Hosts[i].Success.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold)
+	}
+
+	return nil
+}
+
+func (c *Cfg) HostsList(ctx context.Context) ([]*Host, error) {
+	var hosts []*Host
+	for i := range c.Hosts {
+		hosts = append(hosts, &c.Hosts[i])
+	}
+	return hosts, nil
+}
+
+func (c *Cfg) FindHost(ctx context.Context, id string) (*Host, error) {
+	for _, host := range c.Hosts {
+		if host.ID == id {
+			return &host, nil
+		}
+	}
+	return nil, fmt.Errorf("host with id %s not found", id)
+}
+
+func (c *Cfg) AddHost(ctx context.Context, h *Host) error {
+	c.Hosts = append(c.Hosts, *h)
+
+	if c.Validate() != nil {
+		return fmt.Errorf("validate config: %w", c.Validate())
+	}
+
+	return c.save()
+}
+
+func (c *Cfg) DeleteHost(ctx context.Context, id string) error {
+	for i, host := range c.Hosts {
+		if host.ID == id {
+			c.Hosts = append(c.Hosts[:i], c.Hosts[i+1:]...)
+			return c.save()
+		}
+	}
+	return fmt.Errorf("host with id %s not found", id)
+}
+
+func (c *Cfg) UpdateHost(ctx context.Context, h *Host) error {
+	for i, host := range c.Hosts {
+		if host.ID == h.ID {
+			c.Hosts[i] = *h
+			return c.save()
+		}
+	}
+	return fmt.Errorf("host with id %s not found", h.ID)
+}
+
+func (c *Cfg) save() error {
+	b, err := yaml.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(c.path, b, 0644); err != nil {
+		return err
 	}
 
 	return nil
