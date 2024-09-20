@@ -1,22 +1,9 @@
-FROM exelban/baseimage:node-14 as build-web
-
-WORKDIR /app/
-
-COPY admin/package*.json ./
-COPY admin/yarn.lock ./
-RUN yarn --silent
-
-COPY admin/ .
-RUN yarn build
-
-FROM exelban/baseimage:golang-1.18 as build-app
+FROM exelban/baseimage:golang-latest as build-app
 
 WORKDIR /app/
 COPY go.mod .
 COPY go.sum .
 RUN go mod download
-
-COPY --from=build-web /app/dist /app/admin/dist
 COPY . .
 
 RUN go build -o ./bin/main ./main.go

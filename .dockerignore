@@ -1,5 +1,7 @@
 .idea
 .git
+.DS_Store
 config.yaml
 mock_test.go
-admin/dist
+db
+.run

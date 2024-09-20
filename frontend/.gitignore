@@ -1,8 +1,0 @@
-logs
-*.log
-npm-debug.log*
-yarn-error.log*
-node_modules
-dist
-.idea
-.DS_Store

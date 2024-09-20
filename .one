@@ -1,0 +1,6 @@
+name: JAM
+context: services
+image: exelban/jam:latest
+build:
+  push: true
+  platforms: linux/amd64
