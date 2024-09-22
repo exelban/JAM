@@ -2,10 +2,8 @@ package notify
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/pkgz/rest"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,10 +11,10 @@ import (
 )
 
 func TestSlack_send(t *testing.T) {
-	router := chi.NewRouter()
+	router := http.NewServeMux()
 
-	router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-		b, _ := ioutil.ReadAll(r.Body)
+	router.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
 		req := struct {
 			Text string `json:"text,omitempty"`
 		}{}
@@ -25,7 +23,7 @@ func TestSlack_send(t *testing.T) {
 		if req.Text == "timeout" {
 			time.Sleep(time.Millisecond * 20)
 		} else if req.Text == "error" {
-			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, "error")
+			http.Error(w, "error", http.StatusInternalServerError)
 			return
 		}
 

@@ -2,36 +2,40 @@ package monitor
 
 import (
 	"context"
-	"github.com/exelban/cheks/pkg/dialer"
-	"github.com/exelban/cheks/pkg/notify"
-	"github.com/exelban/cheks/store/engine"
-	"github.com/exelban/cheks/types"
+	"crypto/rand"
+	"fmt"
+	"github.com/exelban/JAM/pkg/dialer"
+	"github.com/exelban/JAM/pkg/notify"
+	"github.com/exelban/JAM/store"
+	"github.com/exelban/JAM/types"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestWatcher_check(t *testing.T) {
 	ts, status, shutdown := srv(0)
 	defer shutdown()
+	ctx := context.Background()
+
+	sn := 2
+	fn := 3
+	ri := 100 * time.Millisecond
 
 	w := &watcher{
 		dialer: dialer.New(1),
 		notify: &notify.Notify{},
-		history: engine.NewLocal(&types.HistoryCounts{
-			Check: 100,
-		}),
-		host: types.Host{
-			URL:              ts.URL,
-			SuccessThreshold: 2,
-			FailureThreshold: 3,
-			Success: &types.Success{
+		store:  store.NewMemory(ctx),
+		host: &types.Host{
+			URL: ts.URL,
+			Conditions: &types.Success{
 				Code: []int{200},
 			},
-			History: &types.HistoryCounts{
-				Check: 100,
-			},
+			SuccessThreshold: &sn,
+			FailureThreshold: &fn,
+			Interval:         &ri,
 		},
-		ctx: context.Background(),
+		ctx: ctx,
 	}
 
 	w.check()
@@ -55,7 +59,7 @@ func TestWatcher_check(t *testing.T) {
 	require.Equal(t, types.UP, w.status)
 
 	// reach the history limit
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 30; i++ {
 		w.check()
 	}
 
@@ -75,139 +79,115 @@ func TestWatcher_check(t *testing.T) {
 }
 
 func TestWatcher_validate(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("no thresholds", func(t *testing.T) {
 		w := &watcher{
-			host:    types.Host{},
-			notify:  &notify.Notify{},
-			history: engine.NewLocal(&types.HistoryCounts{}),
+			host:   &types.Host{},
+			notify: &notify.Notify{},
+			store:  store.NewMemory(ctx),
 		}
-		w.validate()
-		require.Equal(t, types.Unknown, w.status)
+		w.validate(true)
+		require.Equal(t, types.UP, w.status)
+		w.validate(false)
+		require.Equal(t, types.DOWN, w.status)
+		w.validate(true)
+		require.Equal(t, types.UP, w.status)
 	})
 
-	t.Run("1 thresholds", func(t *testing.T) {
+	t.Run("min thresholds", func(t *testing.T) {
+		sn := 2
+		fn := 2
+
 		w := &watcher{
 			notify: &notify.Notify{},
-			host: types.Host{
-				SuccessThreshold: 1,
-				FailureThreshold: 1,
-				History:          &types.HistoryCounts{},
+			store:  store.NewMemory(ctx),
+			host: &types.Host{
+				ID:               id(),
+				SuccessThreshold: &sn,
+				FailureThreshold: &fn,
 			},
-			history: engine.NewLocal(&types.HistoryCounts{
-				Check:   10,
-				Success: 1,
-				Failure: 1,
-			}),
 		}
 
-		w.validate()
+		w.validate(true)
 		require.Equal(t, types.Unknown, w.status)
 
-		w.history.Add(types.HttpResponse{
-			Status: false,
-		})
-		w.history.Add(types.HttpResponse{
-			Status: true,
-		})
-		w.validate()
+		w.validate(false)
+		require.Equal(t, types.Unknown, w.status)
+		w.validate(false)
+		require.Equal(t, types.DOWN, w.status)
+		w.validate(true)
+		require.Equal(t, types.DOWN, w.status)
+		w.validate(true)
 		require.Equal(t, types.UP, w.status)
 
-		w.history.Add(types.HttpResponse{
-			Status: false,
-		})
-		w.validate()
-		require.Equal(t, types.DOWN, w.status)
+		w.validate(false)
+		require.Equal(t, types.UP, w.status)
 	})
 
 	t.Run("success", func(t *testing.T) {
+		sn := 3
+		fn := 2
+
 		w := &watcher{
 			notify: &notify.Notify{},
-			host: types.Host{
-				SuccessThreshold: 3,
-				FailureThreshold: 2,
-				History:          &types.HistoryCounts{},
+			store:  store.NewMemory(ctx),
+			host: &types.Host{
+				ID:               id(),
+				SuccessThreshold: &sn,
+				FailureThreshold: &fn,
 			},
-			history: engine.NewLocal(&types.HistoryCounts{
-				Check:   10,
-				Success: 3,
-				Failure: 2,
-			}),
 		}
 
 		for i := 0; i < 6; i++ {
-			w.history.Add(types.HttpResponse{
-				Status: false,
-			})
-			w.validate()
+			w.validate(false)
 		}
-		w.history.Add(types.HttpResponse{
-			Status: true,
-		})
-		w.validate()
-		w.history.Add(types.HttpResponse{
-			Status: true,
-		})
-		w.validate()
+		w.validate(true)
+		w.validate(true)
 		require.Equal(t, types.DOWN, w.status)
 
-		w.history.Add(types.HttpResponse{
-			Status: true,
-		})
-		w.validate()
+		w.validate(true)
 		require.Equal(t, types.UP, w.status)
 
-		w.history.Add(types.HttpResponse{
-			Status: false,
-		})
-		w.validate()
+		w.validate(false)
 		require.Equal(t, types.UP, w.status)
-		w.history.Add(types.HttpResponse{
-			Status: false,
-		})
-		w.validate()
+		w.validate(false)
 		require.Equal(t, types.DOWN, w.status)
 	})
 
 	t.Run("failure", func(t *testing.T) {
+		sn := 2
+		fn := 3
+
 		w := &watcher{
 			notify: &notify.Notify{},
-			host: types.Host{
-				SuccessThreshold: 2,
-				FailureThreshold: 3,
-				History:          &types.HistoryCounts{},
+			store:  store.NewMemory(ctx),
+			host: &types.Host{
+				ID:               id(),
+				SuccessThreshold: &sn,
+				FailureThreshold: &fn,
 			},
-			history: engine.NewLocal(&types.HistoryCounts{
-				Check:   10,
-				Success: 2,
-				Failure: 3,
-			}),
 		}
 
 		for i := 0; i < 6; i++ {
-			w.history.Add(types.HttpResponse{
-				Status: true,
-			})
-			w.validate()
+			w.validate(true)
 		}
-		w.history.Add(types.HttpResponse{
-			Status: false,
-		})
-		w.validate()
-		w.history.Add(types.HttpResponse{
-			Status: false,
-		})
-		w.validate()
+		w.validate(false)
+		w.validate(false)
 		require.Equal(t, types.UP, w.status)
-		w.history.Add(types.HttpResponse{
-			Status: false,
-		})
-		w.validate()
+		w.validate(false)
 		require.Equal(t, types.DOWN, w.status)
 
-		w.history.Add(types.HttpResponse{
-			Status: true,
-		})
-		w.validate()
+		w.validate(true)
 		require.Equal(t, types.DOWN, w.status)
 	})
+}
+
+func id() string {
+	n := 12
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%X", b)
 }

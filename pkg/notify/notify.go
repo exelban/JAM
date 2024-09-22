@@ -3,7 +3,7 @@ package notify
 import (
 	"context"
 	"fmt"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/JAM/types"
 	"log"
 	"strings"
 	"sync"
@@ -13,6 +13,7 @@ import (
 //go:generate moq -out mock_test.go . notify
 
 type notify interface {
+	string() string
 	send(str string) error
 }
 
@@ -57,50 +58,49 @@ func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 		}
 	}
 
-	if cfg.LivenessInterval != "" {
-		log.Printf("[INFO] Liveness interval is enabled every %s", cfg.LivenessInterval)
-
-		duration, err := time.ParseDuration(cfg.LivenessInterval)
-		if err != nil {
-			return nil, fmt.Errorf("parse liveness interval: %w", err)
-		}
-		tk := time.NewTicker(duration)
-
-		go func() {
-		loop:
-			for {
-				select {
-				case <-tk.C:
+	go func() {
+	loop:
+		for {
+			select {
+			case <-ctx.Done():
+				if cfg.Alerts.ShutdownMessage {
 					for _, client := range n.clients {
-						if err := client.send("Liveness check"); err != nil {
-							log.Printf("[ERROR] Liveness check: %s", err)
+						if err := client.send("Going offline..."); err != nil {
+							log.Printf("[ERROR] send shutdown message: %s", err)
 						}
 					}
-				case <-ctx.Done():
-					tk.Stop()
-					if cfg.Alerts.ShutdownMessage {
-						for _, client := range n.clients {
-							if err := client.send("Going offline..."); err != nil {
-								log.Printf("[ERROR] send shutdown message: %s", err)
-							}
-						}
-					}
-					break loop
 				}
+				break loop
 			}
-		}()
-	}
+		}
+	}()
 
 	return n, nil
 }
 
-func (n *Notify) Set(status types.StatusType, name string) error {
+func (n *Notify) Set(clients []string, status types.StatusType, name string) error {
 	text := fmt.Sprintf("`%s` has a new status: %s", name, strings.ToUpper(string(status)))
 
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
 	for _, c := range n.clients {
+		send := false
+		if clients != nil && len(clients) > 0 {
+			for _, client := range clients {
+				if c.string() == client {
+					send = true
+					break
+				}
+			}
+		} else {
+			send = true
+		}
+
+		if !send {
+			continue
+		}
+
 		if err := c.send(text); err != nil {
 			return err
 		}

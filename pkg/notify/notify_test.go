@@ -3,7 +3,7 @@ package notify
 import (
 	"context"
 	"errors"
-	"github.com/exelban/cheks/types"
+	"github.com/exelban/JAM/types"
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
@@ -31,6 +31,9 @@ func TestNew(t *testing.T) {
 
 func TestNotify_Set(t *testing.T) {
 	m := &notifyMock{
+		stringFunc: func() string {
+			return "mock"
+		},
 		sendFunc: func(str string) error {
 			if strings.Contains(str, "test_ok") {
 				return nil
@@ -43,6 +46,6 @@ func TestNotify_Set(t *testing.T) {
 		clients: []notify{m},
 	}
 
-	require.NoError(t, n.Set(types.UP, "test_ok"))
-	require.Error(t, n.Set(types.UP, "error"))
+	require.NoError(t, n.Set(nil, types.UP, "test_ok"))
+	require.Error(t, n.Set(nil, types.UP, "error"))
 }

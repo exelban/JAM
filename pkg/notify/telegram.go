@@ -19,6 +19,10 @@ type Telegram struct {
 	timeout time.Duration
 }
 
+func (t *Telegram) string() string {
+	return "telegram"
+}
+
 func (t *Telegram) send(str string) error {
 	g, _ := errgroup.WithContext(context.Background())
 	for _, chatID := range t.chatIDs {

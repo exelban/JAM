@@ -1,73 +1,74 @@
-# cheks
+# JAM
 
-[![Cheks](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/cheks/preview.png)](https://github.com/exelban/cheks/releases)
+[![JAM](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/JAM/cover.png)](https://github.com/exelban/JAM)
 
-Simple monitoring for APIs and servers with dashboard and alerts.
+Just Another Monitoring
 
-## Install
-To run the Cheks you need to have a docker and configuration file.
+## Description
+JAM is a simple monitoring tool application. 
+It allows you to monitor the status of your services and applications by sending HTTP requests to them and checking the response status code.
+The main idea is to have a simple and easy-to-use monitoring tool with minimalistic and nice design.
 
-Cheks provides small prebuild images for different architectures and operating systems.
-You could use an image from Docker Hub `exelban/cheks` or GitHub package registry `ghcr.io/exelban/cheks`.
+For now it is in the development stage and has a lot of features to be implemented. Such as proper alerts, more monitoring options, events history and more.
 
-The easiest way to run Checks is to use docker-compose:
+## Features
+- 90 days history
+- groups of hosts
+- alerts (in progress)
+- events history (in progress)
+- multiple databases support (in progress, only bolt and in-memory for now)
 
+## Installation
+
+Application is available as a Docker image. You can pull it from the Docker Hub or GitHub Registry:
+- [exelban/jam:latest](https://hub.docker.com/r/exelban/jam)
+- [ghcr.io/exelban/jam:latest](https://github.com/users/exelban/packages/container/package/jam)
+
+Also you can build it from the source code or use the precompiled binaries. But docker is the easiest way to run the application. And it is recommended to use it.
+
+### Docker
+```bash
+docker run -d -v ./jam.yaml:/app/config.yaml exelban/jam:latest
+```
+
+### Docker Compose
 ```yaml
-version: "3"
-
 services:
-  cheks:
-    image: exelban/cheks
-    ports:
-      - "8080:8080"
+  jam:
+    image: exelban/jam:latest
+    container_name: jam
+    restart: unless-stopped
     volumes:
-      - ${PWD}/config.yaml:/srv/config.yaml
+      - ./jam.yaml:/app/config.yaml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: "curl -f http://localhost:8822/healthz || exit 1"
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 3s
 ```
 
-or with docker:
+### Precompiled binaries
+You can download the precompiled binaries from the [releases](https://github.com/exelban/JAM/releases) page.
 
-```shell
-docker run -p 8080:8080 -v $(pwd)/config.yaml:./srv/config.yaml exelban/cheks
+### Build from source
+To build the application from the source code you need to have [Go](https://go.dev/doc/install) installed on your machine.
+
+```bash
+git clone https://github.com/exelban/JAM.git
+cd JAM
+go build -o jam cmd/jam/main.go
+./jam
 ```
 
-## Parameters
-
-| Command line | Environment | Default | Description |
-| ------------ | ----------- | ------- | ----------- |
-| config | CONFIG | ./config.yaml | Path to the configuration file |
-| auth | AUTH | false | Secure dashboard with credentials |
-| username | USERNAME | | Username for the dashboard (only if auth is true). Required if AUTH=true |
-| password | PASSWORD | | Password for the dashboard. If empty, will be generated on the first run |
-
-## Configuration file
-The simplest configuration file could only have a list of hosts:
-
-```yaml
-hosts:
-  - url: https://github.com
-  - url: https://google.com
-  - url: https://facebook.com
-```
-
-Optional configuration for host:  
-- `name: string` - name  
-- `tags: [string]` - list of tags  
-
-- `retry: string` - retry interval for request. Allowed golang style durations: 10s, 60s, 3m.  
-- `timeout: string` - retry interval for request. Allowed golang style durations: 10s, 60s, 3m.  
-- `initialDelay: string` - timeout before the request will be canceled. Allowed golang style durations: 10s, 60s, 3m.  
-- `successThreshold: int` - number of success requests before host will be marked as live  
-- `failureThreshold: int` - number of failed requests before host will be marked as dead  
-
-- `success` - allows to define success request parameters as response code and response body:
-
-```yaml
-success:
-  code: [200, 201, 202]
-  body: {"ok": true}
-```
-
-- `headers: map[string]string` - you could specify the headers which will be sent with the request
+## Configuration
+The application is configured via JSON or YAML file. You can find the [example](https://github.com/exelban/JAM/blob/master/example.yaml) of the configuration file in the repository.
+You can set the path to the configuration file via the `--config-path` flag (`CONFIG_PATH` env) or by default it will look for the `config.yaml` file in the current directory.
 
 ## License
-[MIT License](https://github.com/exelban/cheks/blob/master/LICENSE)
+[MIT License](https://github.com/exelban/JAM/blob/master/LICENSE)

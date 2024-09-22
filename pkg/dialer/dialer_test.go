@@ -2,9 +2,7 @@ package dialer
 
 import (
 	"context"
-	"github.com/exelban/cheks/types"
-	"github.com/go-chi/chi/v5"
-	"github.com/pkgz/rest"
+	"github.com/exelban/JAM/types"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -55,21 +53,21 @@ func TestDialer_Dial(t *testing.T) {
 				})
 				require.True(t, resp.OK)
 				require.Equal(t, http.StatusOK, resp.Code)
-				require.NotEmpty(t, resp.Bytes)
 				wg.Done()
 			}()
 		}
 
 		wg.Wait()
-		require.Less(t, time.Now().Sub(start), time.Millisecond*50)
-		require.Greater(t, time.Now().Sub(start), time.Millisecond*30)
+		require.Less(t, time.Now().Sub(start).Milliseconds(), int64(50))
+		require.Greater(t, time.Now().Sub(start).Milliseconds(), int64(30))
 	})
 
 	t.Run("check timeout", func(t *testing.T) {
+		timeout := time.Millisecond * 5
 		resp := dialer.Dial(ctx, &types.Host{
 			Method:          "GET",
 			URL:             ts.URL,
-			TimeoutInterval: time.Millisecond * 5,
+			TimeoutInterval: &timeout,
 		})
 		require.False(t, resp.OK)
 		require.Equal(t, 0, resp.Code)
@@ -78,16 +76,16 @@ func TestDialer_Dial(t *testing.T) {
 }
 
 func srv(timeout time.Duration) (*httptest.Server, *atomic.Value, func()) {
-	router := chi.NewRouter()
+	router := http.NewServeMux()
 	status := atomic.Value{}
 	status.Store(true)
 
-	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(timeout)
 		if status.Load() == true {
-			rest.OkResponse(w)
+			w.WriteHeader(http.StatusOK)
 		} else {
-			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, "error")
+			http.Error(w, "error", http.StatusInternalServerError)
 		}
 	})
 

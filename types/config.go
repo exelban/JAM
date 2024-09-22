@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -31,31 +31,47 @@ type Alerts struct {
 	ShutdownMessage       bool  `json:"shutdownMessage" yaml:"shutdownMessage"`
 }
 
+type Storage struct {
+	Type string  `json:"type" yaml:"type"`
+	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
+}
+
 type Cfg struct {
-	MaxConn int `json:"maxConn" yaml:"maxConn"`
+	MaxConn int `json:"maxConn" yaml:"maxConn,omitempty"`
 
-	Retry            string `json:"retry" yaml:"retry"`
-	Timeout          string `json:"timeout" yaml:"timeout"`
-	InitialDelay     string `json:"initialDelay" yaml:"initialDelay"`
-	LivenessInterval string `json:"livenessInterval" yaml:"livenessInterval"`
-	SuccessThreshold int    `json:"successThreshold" yaml:"successThreshold"`
-	FailureThreshold int    `json:"failureThreshold" yaml:"failureThreshold"`
+	Interval     time.Duration  `json:"interval,omitempty" yaml:"interval,omitempty"`
+	Timeout      time.Duration  `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	InitialDelay *time.Duration `json:"initialDelay,omitempty" yaml:"initialDelay,omitempty"`
+	
+	SuccessThreshold int `json:"successThreshold" yaml:"successThreshold,omitempty"`
+	FailureThreshold int `json:"failureThreshold" yaml:"failureThreshold,omitempty"`
 
-	Success *Success          `json:"success" yaml:"success"`
-	History *HistoryCounts    `json:"history" yaml:"history"`
-	Headers map[string]string `json:"headers" yaml:"headers"`
+	Conditions *Success          `json:"success" yaml:"success,omitempty"`
+	Headers    map[string]string `json:"headers" yaml:"headers,omitempty"`
 
-	Hosts  []Host `json:"hosts" yaml:"hosts"`
-	Alerts Alerts `json:"alerts" yaml:"alerts"`
+	Alerts    Alerts   `json:"alerts" yaml:"alerts,omitempty"`
+	Storage   *Storage `json:"storage" yaml:"storage,omitempty"`
+	FileHosts []*Host  `json:"hosts" yaml:"hosts"`
+	Hosts     []*Host  `json:"-" yaml:"-"`
 
-	path string
-	FW   chan bool
+	path        string    `yaml:"-"`
+	initialized bool      `yaml:"-"`
+	FW          chan bool `yaml:"-"`
 }
 
 func NewConfig(ctx context.Context, path string) (*Cfg, error) {
 	cfg := &Cfg{
 		path: path,
 		FW:   make(chan bool),
+	}
+
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		if err := cfg.save(); err != nil {
+			return nil, fmt.Errorf("save config: %w", err)
+		}
+	}
+	if err := cfg.Parse(); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
 	go func() {
@@ -68,7 +84,6 @@ func NewConfig(ctx context.Context, path string) (*Cfg, error) {
 				if err != nil {
 					continue
 				}
-
 				if fi.ModTime() != modTimestamp {
 					log.Printf("[DEBUG] config changed: %s -> %s",
 						modTimestamp.Format(time.RFC3339Nano), fi.ModTime().Format(time.RFC3339Nano))
@@ -95,16 +110,24 @@ func (c *Cfg) Parse() error {
 		_ = file.Close()
 	}()
 
-	bytes, err := ioutil.ReadAll(file)
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
 
 	if strings.HasSuffix(c.path, ".yaml") || strings.HasSuffix(c.path, ".yml") {
-		log.Print("[DEBUG] detect yaml config")
+		if c.initialized {
+			log.Print("[DEBUG] detect yaml config")
+		} else {
+			c.initialized = true
+		}
 		return yaml.Unmarshal(bytes, &c)
 	} else if strings.HasSuffix(c.path, ".json") {
-		log.Print("[DEBUG] detect json config")
+		if c.initialized {
+			log.Print("[DEBUG] detect json config")
+		} else {
+			c.initialized = true
+		}
 		return json.Unmarshal(bytes, &c)
 	}
 
@@ -113,28 +136,21 @@ func (c *Cfg) Parse() error {
 
 // Validate - trying to guess if host is API or Server, also set default timeout and retry values
 func (c *Cfg) Validate() error {
-	if len(c.Hosts) == 0 {
-		return errors.New("no hosts for monitoring")
-	}
-
 	if c.MaxConn == 0 {
 		c.MaxConn = 128
 	}
-	if c.Retry == "" {
-		c.Retry = "60s"
+	if c.Interval == time.Duration(0) {
+		c.Interval = 30 * time.Second
 	}
-	if c.Timeout == "" {
-		c.Timeout = "180s"
+	if c.Timeout == time.Duration(0) {
+		c.Timeout = 60 * time.Second
 	}
-	if c.InitialDelay == "" {
-		c.InitialDelay = "0"
-	}
-	if c.Success == nil {
-		c.Success = &Success{
+	if c.Conditions == nil {
+		c.Conditions = &Success{
 			Code: []int{200, 201, 202, 203, 204, 205, 206, 207, 208},
 		}
-	} else if len(c.Success.Code) == 0 {
-		c.Success.Code = []int{200, 201, 202, 203, 204, 205, 206, 207, 208}
+	} else if len(c.Conditions.Code) == 0 {
+		c.Conditions.Code = []int{200, 201, 202, 203, 204, 205, 206, 207, 208}
 	}
 	if c.SuccessThreshold == 0 {
 		c.SuccessThreshold = 2
@@ -143,87 +159,125 @@ func (c *Cfg) Validate() error {
 		c.FailureThreshold = 3
 	}
 
-	if c.History == nil {
-		c.History = &HistoryCounts{
-			Check:   180,
-			Success: 30,
-			Failure: 30,
-		}
-	} else if c.History.Check == 0 {
-		c.History.Check = 180
-	} else if c.History.Success == 0 {
-		c.History.Success = 30
-	} else if c.History.Failure == 0 {
-		c.History.Failure = 30
-	}
-
-	for i, host := range c.Hosts {
-		c.Hosts[i].Type = host.GetType()
-
+	for i, host := range c.FileHosts {
 		if host.URL == "" {
-			return fmt.Errorf("no url for %s", host.Name)
+			return errors.New("host cannot be without url")
 		}
 
-		if host.Retry == "" {
-			c.Hosts[i].Retry = c.Retry
-		}
-		if host.Timeout == "" {
-			c.Hosts[i].Timeout = c.Timeout
-		}
-		if host.InitialDelay == "" {
-			c.Hosts[i].InitialDelay = c.InitialDelay
-		}
-		if host.Success == nil {
-			c.Hosts[i].Success = c.Success
-		} else if len(host.Success.Code) == 0 {
-			c.Hosts[i].Success.Code = c.Success.Code
-		}
+		host.ID = host.GenerateID()
 
-		if host.SuccessThreshold == 0 {
-			c.Hosts[i].SuccessThreshold = c.SuccessThreshold
-		}
-		if host.FailureThreshold == 0 {
-			c.Hosts[i].FailureThreshold = c.FailureThreshold
-		}
-
-		retryInterval, err := time.ParseDuration(c.Hosts[i].Retry)
-		if err != nil {
-			return fmt.Errorf("retry interval: %w", err)
-		}
-		c.Hosts[i].RetryInterval = retryInterval
-
-		timeoutInterval, err := time.ParseDuration(c.Hosts[i].Timeout)
-		if err != nil {
-			return fmt.Errorf("timeout interval: %w", err)
-		}
-		c.Hosts[i].TimeoutInterval = timeoutInterval
-
-		initialDelayInterval, err := time.ParseDuration(c.Hosts[i].InitialDelay)
-		if err != nil {
-			return fmt.Errorf("initial delay interval: %w", err)
-		}
-		c.Hosts[i].InitialDelayInterval = initialDelayInterval
-
-		if host.History == nil {
-			c.Hosts[i].History = c.History
-		} else if host.History.Check == 0 {
-			c.Hosts[i].History.Check = c.History.Check
-		} else if host.History.Success == 0 {
-			c.Hosts[i].History.Success = c.History.Success
-		} else if host.History.Failure == 0 {
-			c.Hosts[i].History.Failure = c.History.Failure
-		}
-
-		for key, value := range c.Headers {
-			if _, ok := c.Hosts[i].Headers[key]; !ok {
-				c.Hosts[i].Headers[key] = value
+		idx := -1
+		for j, h := range c.Hosts {
+			if h.ID == host.ID {
+				idx = j
+				break
 			}
 		}
 
-		log.Printf("[DEBUG] Name=%s, URL=%s, Type=%s, InitialDelay=%s, Retry=%s, Timeout=%s, SuccessCode=%v, SuccessThreshold=%d, FailureThreshold=%d",
-			c.Hosts[i].Name, c.Hosts[i].URL, c.Hosts[i].Type, c.Hosts[i].InitialDelayInterval, c.Hosts[i].RetryInterval,
-			c.Hosts[i].TimeoutInterval, c.Hosts[i].Success.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold)
+		host.Index = i
+		host.Type = host.GetType()
+
+		if host.Interval == nil {
+			host.Interval = &c.Interval
+		}
+		if host.TimeoutInterval == nil {
+			host.TimeoutInterval = &c.Timeout
+		}
+		if host.InitialDelay == nil {
+			host.InitialDelay = c.InitialDelay
+		}
+		if host.Conditions == nil {
+			host.Conditions = c.Conditions
+		} else if len(host.Conditions.Code) == 0 {
+			host.Conditions.Code = c.Conditions.Code
+		}
+
+		if host.SuccessThreshold == nil {
+			host.SuccessThreshold = &c.SuccessThreshold
+		}
+		if host.FailureThreshold == nil {
+			host.FailureThreshold = &c.FailureThreshold
+		}
+
+		for key, value := range c.Headers {
+			if _, ok := host.Headers[key]; !ok {
+				host.Headers[key] = value
+			}
+		}
+
+		if idx == -1 {
+			c.addHost(host)
+		} else {
+			c.updateHost(idx, host)
+			i = idx
+		}
+
+		msg := fmt.Sprintf("[DEBUG] id=%s", c.Hosts[i].ID)
+		if c.Hosts[i].Name != nil {
+			msg += fmt.Sprintf(", name=%s", *c.Hosts[i].Name)
+		}
+		log.Printf(fmt.Sprintf("%s, url=%s, type=%s, initialDelay=%s, interval=%s, timeout=%s, successCode=%v, successThreshold=%d, failureThreshold=%d, hidden=%v",
+			msg, c.Hosts[i].URL, c.Hosts[i].Type, c.Hosts[i].InitialDelay, c.Hosts[i].Interval, c.Hosts[i].TimeoutInterval, c.Hosts[i].Conditions.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold, c.Hosts[i].Hidden))
+	}
+
+	// remove hosts that are not in the config file
+	for i := len(c.Hosts) - 1; i >= 0; i-- {
+		found := false
+		for _, host := range c.FileHosts {
+			if c.Hosts[i].ID == host.GenerateID() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Printf("[DEBUG] remove host id=%s: %s", c.Hosts[i].ID, c.Hosts[i].URL)
+			c.Hosts = append(c.Hosts[:i], c.Hosts[i+1:]...)
+		}
+	}
+
+	if len(c.Hosts) == 0 {
+		return errors.New("no hosts for monitoring")
 	}
 
 	return nil
+}
+
+func (c *Cfg) save() error {
+	b, err := yaml.Marshal(c)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(c.path, b, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Cfg) addHost(host *Host) {
+	c.Hosts = append(c.Hosts, host)
+}
+func (c *Cfg) updateHost(at int, host *Host) {
+	c.Hosts[at].Index = host.Index
+	c.Hosts[at].Type = host.Type
+
+	c.Hosts[at].Name = host.Name
+	c.Hosts[at].Description = host.Description
+	c.Hosts[at].Group = host.Group
+	c.Hosts[at].Tags = host.Tags
+
+	c.Hosts[at].Method = host.Method
+
+	c.Hosts[at].Interval = host.Interval
+	c.Hosts[at].InitialDelay = host.InitialDelay
+	c.Hosts[at].TimeoutInterval = host.TimeoutInterval
+
+	c.Hosts[at].SuccessThreshold = host.SuccessThreshold
+	c.Hosts[at].FailureThreshold = host.FailureThreshold
+
+	c.Hosts[at].Conditions = host.Conditions
+	c.Hosts[at].Headers = host.Headers
+
+	c.Hosts[at].Alerts = host.Alerts
+
+	c.Hosts[at].Hidden = host.Hidden
 }

@@ -5,27 +5,19 @@ import (
 )
 
 // StatusType - host status type
+// HostType - host type
 type StatusType string
+type HostType string
 
 const (
-	Unknown StatusType = "unknown"
-	UP      StatusType = "up"
-	DOWN    StatusType = "down"
+	Unknown  StatusType = "unknown"
+	UP       StatusType = "up"
+	DEGRADED StatusType = "degraded"
+	DOWN     StatusType = "down"
+
+	HttpType  HostType = "http"
+	MongoType HostType = "mongo"
 )
-
-// Service - structure for API
-type Service struct {
-	ID string `json:"id"`
-
-	Name   string `json:"name"`
-	Host   string `json:"host"`
-	Tags   []Tag  `json:"tags"`
-	Status Status `json:"status"`
-
-	Checks  []HttpResponse `json:"checks"`
-	Success []HttpResponse `json:"success"`
-	Failure []HttpResponse `json:"failure"`
-}
 
 // Tag - color tag structure for Service
 type Tag struct {
@@ -41,23 +33,30 @@ type Status struct {
 
 // HttpResponse - response from the http dial
 type HttpResponse struct {
-	Timestamp time.Time `json:"timestamp"`
-	Code      int       `json:"code"`
-	Body      string    `json:"body"`
+	Timestamp time.Time     `json:"timestamp"`
+	Time      time.Duration `json:"time"`
+	Code      int           `json:"code,omitempty"`
+	Body      string        `json:"body,omitempty"`
 
-	OK     bool   `json:"-"`
-	Bytes  []byte `json:"-"`
-	Status bool   `json:"status"`
+	OK         bool       `json:"-"`
+	Bytes      []byte     `json:"-"`
+	Status     bool       `json:"status,omitempty"`
+	StatusType StatusType `json:"statusType,omitempty"`
 
-	DNS          time.Duration `json:"DNS"`
-	TLSHandshake time.Duration `json:"TLS_handshake"`
-	Connect      time.Duration `json:"connect"`
-	TTFB         time.Duration `json:"TTFB"`
+	DNS          time.Duration `json:"DNS,omitempty"`
+	TLSHandshake time.Duration `json:"TLSHandshake,omitempty"`
+	Connect      time.Duration `json:"connect,omitempty"`
+	TTFB         time.Duration `json:"TTFB,omitempty"`
+
+	IsAggregated bool    `json:"isAggregated"`
+	Uptime       float64 `json:"uptime,omitempty"` // aggregation uptime
+	Count        int     `json:"count,omitempty"`  // aggregation count
 }
 
-type HostType string
-
-var (
-	HttpType  HostType = "http"
-	MongoType HostType = "mongo"
-)
+// Aggregation - aggregation structure for the history per day
+type Aggregation struct {
+	ResponseTime time.Duration `json:"responseTime"`
+	Count        int           `json:"count"`
+	Uptime       float64       `json:"uptime"`
+	TS           time.Time     `json:"timestamp"`
+}

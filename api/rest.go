@@ -1,100 +1,76 @@
 package api
 
 import (
-	"crypto/subtle"
-	"github.com/exelban/cheks/types"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
-	"github.com/pkgz/rest"
-	"io/fs"
+	"errors"
+	"fmt"
+	"github.com/exelban/JAM/pkg/html"
+	"github.com/exelban/JAM/pkg/monitor"
+	"github.com/exelban/JAM/types"
+	"log"
 	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
-//go:generate moq -out mock_test.go . monitor
-
-type monitor interface {
-	Status() map[string]types.StatusType
-	Services() []types.Service
-}
-
-type Auth struct {
-	Enabled  bool
-	Username string
-	Password string
-}
-
 type Rest struct {
-	Monitor monitor
+	Monitor   *monitor.Monitor
+	Templates *html.Templates
+
 	Version string
-	FS      fs.FS
-	Auth    Auth
 }
 
-func (s *Rest) Router() chi.Router {
-	router := chi.NewRouter()
+func (s *Rest) Router() *http.ServeMux {
+	router := NewRouter(Recoverer, CORS, Healthz, Info("JAM", s.Version))
 
-	router.Use(middleware.AllowContentType("application/json"))
-	router.Use(middleware.GetHead)
-	router.Use(middleware.Heartbeat("/ping"))
-	router.Use(middleware.StripSlashes)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.Timeout(120 * time.Second))
+	router.HandleFunc("GET /", s.public)
+	router.HandleFunc("GET /{id}", s.public)
+	router.HandleFunc("GET /static/", s.static)
 
-	corsOptions := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET"},
-		AllowedHeaders:   []string{"Accept", "Content-Type"},
-		MaxAge:           300,
-		AllowCredentials: true,
-	})
-	router.Use(corsOptions.Handler)
-
-	router.Use(rest.Logger)
-	router.NotFound(rest.NotFound)
-	router.Use(s.basicAuth)
-
-	router.HandleFunc("/", s.admin)
-	router.HandleFunc("/*", s.admin)
-
-	router.Get("/list", func(w http.ResponseWriter, r *http.Request) {
-		rest.JsonResponse(w, s.Monitor.Services())
-	})
-
-	return router
+	return router.mux
 }
 
-func (s *Rest) basicAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !s.Auth.Enabled {
-			next.ServeHTTP(w, r)
+func (s *Rest) public(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	ctx := r.Context()
+
+	var stats *types.Stats = nil
+	var err error
+	if id == "" {
+		stats, err = s.Monitor.Stats(ctx)
+	} else {
+		stats, err = s.Monitor.StatsByID(ctx, id, false)
+	}
+	if err != nil {
+		if errors.Is(types.ErrHostNotFound, err) {
+			s.notFound(w, r)
 			return
 		}
+		log.Printf("[ERROR] get stats: %v", err)
+		http.Error(w, fmt.Sprintf("error get stats: %v", err), http.StatusInternalServerError)
+		return
+	}
 
-		username, password, ok := r.BasicAuth()
-		if !ok || username != s.Auth.Username || subtle.ConstantTimeCompare([]byte(password), []byte(s.Auth.Password)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-			rest.ErrorResponse(w, r, http.StatusUnauthorized, nil, "restricted")
-			return
-		}
+	if stats == nil {
+		http.Error(w, "stats not found", http.StatusNotFound)
+		return
+	}
 
-		next.ServeHTTP(w, r)
-	})
+	if err := s.Templates.Public.Execute(w, stats); err != nil {
+		log.Printf("[ERROR] generate public html: %v", err)
+		http.Error(w, fmt.Sprintf("error generate public html: %v", err), http.StatusInternalServerError)
+	}
 }
 
-func (s *Rest) admin(w http.ResponseWriter, r *http.Request) {
-	p := strings.Replace(r.URL.Path, "/", "/admin/dist/", 1)
-	rp := strings.Replace(r.URL.RawPath, "/", "/admin/dist/", 1)
+func (s *Rest) notFound(w http.ResponseWriter, r *http.Request) {
+	if err := s.Templates.NotFound.Execute(w, nil); err != nil {
+		log.Printf("[ERROR] generate not found html: %v", err)
+		http.Error(w, fmt.Sprintf("error generate not found html: %v", err), http.StatusInternalServerError)
+	}
+}
 
-	r2 := new(http.Request)
-	*r2 = *r
-	r2.URL = new(url.URL)
-	*r2.URL = *r.URL
-	r2.URL.Path = p
-	r2.URL.RawPath = rp
-
-	http.FileServer(http.FS(s.FS)).ServeHTTP(w, r2)
+func (s *Rest) static(w http.ResponseWriter, r *http.Request) {
+	path := fmt.Sprintf("templates%s", r.URL.Path)
+	if _, err := s.Templates.FS.Open(path); err != nil {
+		s.notFound(w, r)
+		return
+	}
+	http.ServeFileFS(w, r, s.Templates.FS, path)
 }

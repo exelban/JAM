@@ -2,158 +2,97 @@ package monitor
 
 import (
 	"context"
-	"github.com/exelban/cheks/pkg/dialer"
-	"github.com/exelban/cheks/pkg/notify"
-	"github.com/exelban/cheks/store"
-	"github.com/exelban/cheks/types"
-	"log"
+	"github.com/exelban/JAM/pkg/dialer"
+	"github.com/exelban/JAM/pkg/notify"
+	"github.com/exelban/JAM/store"
+	"github.com/exelban/JAM/types"
 	"sync"
-	"time"
 )
 
 // Monitor - main service which track the hosts liveness
 type Monitor struct {
+	Store store.Interface
+
 	dialer *dialer.Dialer
 	notify *notify.Notify
 
-	watchers   []*watcher
+	watchers   map[string]*watcher
 	tagsColors map[string]string
 
-	mu  sync.RWMutex
-	ctx context.Context
+	mu   sync.RWMutex
+	ctx  context.Context
+	once sync.Once
 }
 
 // Run - run the monitor. Creates a jobs for each host in the separate threads
 func (m *Monitor) Run(cfg *types.Cfg) error {
+	m.once.Do(func() {
+		m.watchers = make(map[string]*watcher)
+		m.tagsColors = make(map[string]string)
+	})
+
 	m.mu.Lock()
 	{
 		if m.ctx != nil {
 			m.ctx.Done()
 		}
-		if m.tagsColors == nil {
-			m.tagsColors = make(map[string]string)
-		}
-
 		m.ctx = context.Background()
 		m.dialer = dialer.New(cfg.MaxConn)
 		n, err := notify.New(m.ctx, cfg)
 		if err != nil {
-			m.mu.Unlock()
 			return err
 		}
 		m.notify = n
 	}
 	m.mu.Unlock()
 
-	// add hosts which are does not have watchers
+	// add hosts which are does not have watchers, update if some of them changed
 	for _, host := range cfg.Hosts {
-		ok := false
-		for _, w := range m.watchers {
-			if host.Name == w.host.Name && host.URL == w.host.URL {
-				ok = true
-			}
-		}
-		if !ok {
+		m.mu.RLock()
+		w, ok := m.watchers[host.ID]
+		m.mu.RUnlock()
+		if !ok || w == nil {
 			if err := m.add(host); err != nil {
 				return err
 			}
+		} else {
+			w.cancel()
+			go w.run(m.ctx)
 		}
 	}
 
 	// remove watchers which does not present in the config
-	for i := len(m.watchers) - 1; i >= 0; i-- {
+	m.mu.Lock()
+	for id, w := range m.watchers {
 		ok := false
 		for _, host := range cfg.Hosts {
-			if host.Name == m.watchers[i].host.Name && host.URL == m.watchers[i].host.URL {
+			if host.ID == w.host.ID {
 				ok = true
 			}
 		}
 		if !ok {
-			m.watchers[i].cancel()
-			m.watchers = append(m.watchers[:i], m.watchers[i+1:]...)
+			w.cancel()
+			delete(m.watchers, id)
 		}
 	}
+	m.mu.Unlock()
 
 	return nil
 }
 
-// Status - returns the actual statuses of all hosts
-func (m *Monitor) Status() map[string]types.StatusType {
-	list := make(map[string]types.StatusType)
-
-	m.mu.RLock()
-	for _, w := range m.watchers {
-		w.mu.RLock()
-		w.validate()
-		list[w.host.String()] = w.status
-		w.mu.RUnlock()
-	}
-	m.mu.RUnlock()
-
-	return list
-}
-
-// Services - return the services for the app
-func (m *Monitor) Services() []types.Service {
-	list := []types.Service{}
-
-	start := time.Now()
-
-	m.mu.RLock()
-	for _, w := range m.watchers {
-		w.mu.RLock()
-		{
-			var tags []types.Tag
-			for _, tag := range w.host.Tags {
-				tags = append(tags, types.Tag{
-					Name:  tag,
-					Color: m.tagsColors[tag],
-				})
-			}
-
-			list = append(list, types.Service{
-				Name: w.host.String(),
-				Status: types.Status{
-					Value:     w.status,
-					Timestamp: w.lastCheck,
-				},
-				Tags:    tags,
-				Checks:  w.history.Checks(),
-				Success: w.history.Success(),
-				Failure: w.history.Failure(),
-			})
-		}
-		w.mu.RUnlock()
-	}
-	m.mu.RUnlock()
-
-	log.Printf("[INFO] services list: %v", time.Since(start))
-
-	return list
-}
-
 // add - create a watcher for host
-func (m *Monitor) add(host types.Host) error {
-	history, err := store.New(host.History)
-	if err != nil {
-		return err
-	}
-
-	ctx_, cancel := context.WithCancel(m.ctx)
-
+func (m *Monitor) add(host *types.Host) error {
 	w := &watcher{
-		dialer:  m.dialer,
-		notify:  m.notify,
-		history: history,
-		host:    host,
-		ctx:     ctx_,
-		cancel:  cancel,
+		dialer: m.dialer,
+		notify: m.notify,
+		store:  m.Store,
+		host:   host,
 	}
-	go w.run()
+	go w.run(m.ctx)
 
 	m.mu.Lock()
 	{
-		m.watchers = append(m.watchers, w)
+		m.watchers[host.ID] = w
 		for _, tag := range host.Tags {
 			if _, ok := m.tagsColors[tag]; !ok {
 				m.tagsColors[tag] = types.RandomColor()

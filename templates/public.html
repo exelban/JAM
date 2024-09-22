@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="JAM is a simple and lightweight status page for monitoring your services and systems.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Status page">
+
+  <title>{{ if .IsHost }} {{ $el := (index .Hosts 0) }} {{ if $el.Name }}{{ $el.Name }}{{ else }}{{ $el.Host }}{{ end }} -{{ end }} Status page</title>
+
+  {{ template "style" . }}
+</head>
+<body>
+{{ $root := . }}
+
+<header class="container status-{{ .Status }}">
+  <section>
+    {{ if eq .Status "up" }}
+    {{ if .IsHost }}
+    Host is operational
+    {{ else }}
+    All systems operational
+    {{ end }}
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
+    {{ else if eq .Status "down" }}
+    {{ if .IsHost }}
+    Host is down
+    {{ else }}
+    All systems are down
+    {{ end }}
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>
+    {{ else if eq .Status "degraded" }}
+    Some systems are experiencing issues
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 9v-1a3 3 0 0 1 6 0v1"/><path d="M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1 -10 0v-3a6 6 0 0 1 1 -3"/><path d="M3 13l4 0"/><path d="M17 13l4 0"/><path d="M12 20l0 -6"/><path d="M4 19l3.35 -2"/><path d="M20 19l-3.35 -2"/><path d="M4 7l3.75 2.4"/><path d="M20 7l-3.75 2.4"/></svg>
+    {{ else }}
+    Unknown status
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 8a3.5 3 0 0 1 3.5 -3h1a3.5 3 0 0 1 3.5 3a3 3 0 0 1 -2 3a3 4 0 0 0 -2 4" /><path d="M12 19l0 .01"/></svg>
+    {{end}}
+  </section>
+</header>
+
+<main class="container">
+  <div class="legend">
+    {{ if .IsHost }}
+    Uptime over the past&nbsp;
+    <span class="bp1000">{{ (index (index .Hosts 0).Chart.Intervals 0) }}</span>
+    <span class="bp800">{{ (index (index .Hosts 0).Chart.Intervals 1) }}</span>
+    <span class="bp600">{{ (index (index .Hosts 0).Chart.Intervals 2) }}</span>
+    .&nbsp;
+    <a href="/">Back to list</a>
+    {{ else }}
+    Uptime over the past&nbsp;<span class="bp600">30</span><span class="bp800">60</span><span class="bp1000">90</span>&nbsp;days.
+    {{ end }}
+  </div>
+  <section>
+    {{ if .Hosts }}
+    {{ range $row := .Hosts }}
+    <div class="panel">
+      <div class="head">
+        {{ if .Host }}
+        <div class="info">
+          {{ if $root.IsHost }}
+          {{ if .Name }}<p>{{ .Name }}</p>{{ else }}<p>{{ .Host }}</p>{{ end }}
+          {{ else }}
+          <a href="{{ .ID }}">{{ if .Name }}{{ .Name }}{{ else }}{{ .Host }}{{ end }}</a>
+          {{ end }}
+          {{ if .Name }}<p>| {{ .Host }}{{ end }}
+        </div>
+        {{ else }}
+        <label {{ if .Hosts }}{{ else }}style="cursor: default;"{{ end }}>
+          {{ if .Hosts }}
+          <input type="checkbox">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon-down"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 9c.852 0 1.297 .986 .783 1.623l-.076 .084l-6 6a1 1 0 0 1 -1.32 .083l-.094 -.083l-6 -6l-.083 -.094l-.054 -.077l-.054 -.096l-.017 -.036l-.027 -.067l-.032 -.108l-.01 -.053l-.01 -.06l-.004 -.057v-.118l.005 -.058l.009 -.06l.01 -.052l.032 -.108l.027 -.067l.07 -.132l.065 -.09l.073 -.081l.094 -.083l.077 -.054l.096 -.054l.036 -.017l.067 -.027l.108 -.032l.053 -.01l.06 -.01l.057 -.004l12.059 -.002z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon-up"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.293 7.293a1 1 0 0 1 1.32 -.083l.094 .083l6 6l.083 .094l.054 .077l.054 .096l.017 .036l.027 .067l.032 .108l.01 .053l.01 .06l.004 .057l.002 .059l-.002 .059l-.005 .058l-.009 .06l-.01 .052l-.032 .108l-.027 .067l-.07 .132l-.065 .09l-.073 .081l-.094 .083l-.077 .054l-.096 .054l-.036 .017l-.067 .027l-.108 .032l-.053 .01l-.06 .01l-.057 .004l-.059 .002h-12c-.852 0 -1.297 -.986 -.783 -1.623l.076 -.084l6 -6z"/></svg>
+          {{ end }}
+          {{ .Name }}
+        </label>
+        {{ end }}
+        <p class="status status-{{ .Status }}">{{ .Status }}</p>
+      </div>
+
+      <div class="chart">
+        <ul>
+          {{ range $value := .Chart.Points }}
+          <li class="status-{{ .Status }}" title="{{ .Timestamp }}"></li>
+          {{ end }}
+        </ul>
+        <div class="legend">
+          <p>
+            <span class="bp1000">{{ (index .Chart.Intervals 0) }}</span>
+            <span class="bp800">{{ (index .Chart.Intervals 1) }}</span>
+            <span class="bp600">{{ (index .Chart.Intervals 2) }}</span>
+            ago
+          </p>
+          <div class="spacer"></div>
+          {{ if $root.IsHost }}
+          <p>~{{ .ResponseTime }}</p>
+          {{ else }}
+          <p>{{ .Uptime }}% uptime</p>
+          {{ end }}
+          <div class="spacer"></div>
+          <p>{{ if $root.IsHost }}Now{{ else }}Today{{ end }}</p>
+        </div>
+      </div>
+
+      {{ if .Hosts }}
+      <div class="services">
+        {{ range $val := .Hosts }}
+        <div class="panel">
+          <div class="head">
+            <div class="info">
+              <a href="{{ .ID }}">{{ if .Name }}{{ .Name }}{{ else }}{{ .Host }}{{ end }}</a>
+              {{ if .Name }}<p>| {{ .Host }}{{ end }}
+            </div>
+            <p class="status status-{{ .Status }}">{{ .Status }}</p>
+          </div>
+          <div class="chart">
+            <ul>
+              {{ range $value := .Chart.Points }}
+              <li class="status-{{ .Status }}" title="{{ .Timestamp }}"></li>
+              {{ end }}
+            </ul>
+            <div class="legend">
+              <p>
+                <span class="bp1000">{{ (index .Chart.Intervals 0) }}</span>
+                <span class="bp800">{{ (index .Chart.Intervals 1) }}</span>
+                <span class="bp600">{{ (index .Chart.Intervals 2) }}</span>
+                ago
+              </p>
+              <div class="spacer"></div>
+              <p>{{ .Uptime }}% uptime</p>
+              <div class="spacer"></div>
+              <p>Today</p>
+            </div>
+          </div>
+        </div>
+        {{ end }}
+      </div>
+      {{ end }}
+    </div>
+    {{ end }}
+    {{ else }}
+    <div class="panel"><h1>No hosts found</h1></div>
+    {{ end }}
+
+    {{ if .IsHost }}
+    <div class="panel blocks">
+      <div class="block">
+        <p>{{ index ((index .Hosts 0).Details.Uptime) 0 }}<small>%</small></p>
+        <p>Uptime 30d</p>
+      </div>
+      <div class="block">
+        <p>{{ index ((index .Hosts 0).Details.Uptime) 1 }}<small>%</small></p>
+        <p>Uptime 7d</p>
+      </div>
+      <div class="block">
+        <p>{{ index ((index .Hosts 0).Details.Uptime) 2 }}<small>%</small></p>
+        <p>Uptime 24h</p>
+      </div>
+    </div>
+    <div class="panel blocks">
+      <div class="block">
+        <p>{{ index ((index .Hosts 0).Details.ResponseTime) 0 }}</p>
+        <p>Response time 30d</p>
+      </div>
+      <div class="block">
+        <p>{{ index ((index .Hosts 0).Details.ResponseTime) 1 }}</p>
+        <p>Response time 7d</p>
+      </div>
+      <div class="block">
+        <p>{{ index ((index .Hosts 0).Details.ResponseTime) 2 }}</p>
+        <p>Response time 24h</p>
+      </div>
+    </div>
+    {{ end }}
+  </section>
+
+  {{ if .Events }}
+  <section>
+    {{ range $val := .Events }}
+    <div class="panel event">
+      <div class="details">
+        <div class="icon status-{{ .Status }}">
+          {{ if eq .Status "up" }}
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
+          {{ else if eq .Status "down" }}
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>
+          {{ else if eq .Status "degraded" }}
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 9v-1a3 3 0 0 1 6 0v1"/><path d="M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1 -10 0v-3a6 6 0 0 1 1 -3"/><path d="M3 13l4 0"/><path d="M17 13l4 0"/><path d="M12 20l0 -6"/><path d="M4 19l3.35 -2"/><path d="M20 19l-3.35 -2"/><path d="M4 7l3.75 2.4"/><path d="M20 7l-3.75 2.4"/></svg>
+          {{ else }}
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 8a3.5 3 0 0 1 3.5 -3h1a3.5 3 0 0 1 3.5 3a3 3 0 0 1 -2 3a3 4 0 0 0 -2 4" /><path d="M12 19l0 .01"/></svg>
+          {{end}}
+        </div>
+        <p>{{ .Text }}</p>
+      </div>
+      <div class="ts">
+        <p>{{ .Date }}</p>
+      </div>
+    </div>
+    {{ end }}
+  </section>
+  {{ end }}
+</main>
+
+{{ template "footer" . }}
+
+</body>
+</html>

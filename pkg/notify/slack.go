@@ -17,6 +17,10 @@ type Slack struct {
 	timeout time.Duration
 }
 
+func (s *Slack) string() string {
+	return "slack"
+}
+
 func (s *Slack) send(str string) error {
 	b, _ := json.Marshal(struct {
 		Username string `json:"username,omitempty"`

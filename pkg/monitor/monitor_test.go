@@ -1,10 +1,10 @@
 package monitor
 
 import (
-	"github.com/exelban/cheks/store/engine"
-	"github.com/exelban/cheks/types"
-	"github.com/go-chi/chi/v5"
-	"github.com/pkgz/rest"
+	"context"
+	"fmt"
+	"github.com/exelban/JAM/store"
+	"github.com/exelban/JAM/types"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -17,204 +17,260 @@ func TestMonitor_Run(t *testing.T) {
 	ts, status, shutdown := srv(0)
 	defer shutdown()
 
-	m := Monitor{}
+	m := Monitor{
+		Store: store.NewMemory(context.Background()),
+	}
+
+	name := "host-0"
+	groupName := "group-0"
+	st := 2
+	ft := 3
+	idelay := time.Millisecond * 10
+	rd := time.Millisecond * 30
+	td := time.Millisecond * 100
 
 	hosts := &types.Cfg{
-		Hosts: []types.Host{
+		Hosts: []*types.Host{
 			{
-				Name: "host-0",
-				URL:  ts.URL,
-				Success: &types.Success{
+				Name:             &name,
+				URL:              ts.URL,
+				SuccessThreshold: &st,
+				FailureThreshold: &ft,
+				InitialDelay:     &idelay,
+				Interval:         &rd,
+				TimeoutInterval:  &td,
+				Conditions: &types.Success{
 					Code: []int{200},
 				},
-				SuccessThreshold:     2,
-				FailureThreshold:     3,
-				InitialDelayInterval: time.Millisecond * 10,
-				RetryInterval:        time.Millisecond * 30,
-				TimeoutInterval:      time.Millisecond * 100,
-				History: &types.HistoryCounts{
-					Check:   100,
-					Success: 0,
-					Failure: 0,
+			},
+			{
+				Name:             &name,
+				URL:              ts.URL,
+				Group:            &groupName,
+				SuccessThreshold: &st,
+				FailureThreshold: &ft,
+				InitialDelay:     &idelay,
+				Interval:         &rd,
+				TimeoutInterval:  &td,
+				Conditions: &types.Success{
+					Code: []int{200},
 				},
 			},
 		},
 		MaxConn: 3,
 	}
+	for _, h := range hosts.Hosts {
+		h.ID = h.GenerateID()
+	}
 
 	require.NoError(t, m.Run(hosts))
+	time.Sleep(time.Millisecond * 10)
+	require.Len(t, m.watchers, 2)
 
-	t.Run("must be up", func(t *testing.T) {
-		time.Sleep(time.Millisecond * 100)
-		require.Equal(t, types.UP, m.Status()["host-0"])
-	})
-
-	t.Run("must does down", func(t *testing.T) {
-		status.Store(false)
-		time.Sleep(time.Millisecond * 100)
-		require.Equal(t, types.DOWN, m.Status()["host-0"])
-	})
-
-	t.Run("must does down", func(t *testing.T) {
-		status.Store(true)
-		time.Sleep(time.Millisecond * 30)
-		require.Equal(t, types.DOWN, m.Status()["host-0"])
-	})
-
-	t.Run("add new host", func(t *testing.T) {
-		require.Len(t, m.watchers, 1)
-		hosts.Hosts = append(hosts.Hosts, types.Host{
-			Name: "host-1",
-			URL:  ts.URL,
-			Success: &types.Success{
-				Code: []int{200},
-			},
-			SuccessThreshold:     2,
-			FailureThreshold:     3,
-			InitialDelayInterval: time.Millisecond * 10,
-			RetryInterval:        time.Millisecond * 30,
-			TimeoutInterval:      time.Millisecond * 100,
-			History: &types.HistoryCounts{
-				Check:   100,
-				Success: 0,
-				Failure: 0,
-			},
+	t.Run("status", func(t *testing.T) {
+		t.Run("must be up", func(t *testing.T) {
+			time.Sleep(time.Millisecond * 100)
+			m.mu.RLock()
+			var watch *watcher
+			for _, w := range m.watchers {
+				if w.host.Name == &name {
+					watch = w
+					break
+				}
+			}
+			require.NotNil(t, watch)
+			require.Equal(t, types.UP, watch.status)
+			m.mu.RUnlock()
 		})
-		require.NoError(t, m.Run(hosts))
-		require.Len(t, m.watchers, 2)
+		t.Run("must does down", func(t *testing.T) {
+			status.Store(false)
+			time.Sleep(time.Millisecond * 100)
+			m.mu.RLock()
+			var watch *watcher
+			for _, w := range m.watchers {
+				if w.host.Name == &name {
+					watch = w
+					break
+				}
+			}
+			require.NotNil(t, watch)
+			require.Equal(t, types.DOWN, watch.status)
+			m.mu.RUnlock()
+		})
+		t.Run("must does down", func(t *testing.T) {
+			status.Store(true)
+			time.Sleep(time.Millisecond * 30)
+			m.mu.RLock()
+			var watch *watcher
+			for _, w := range m.watchers {
+				if w.host.Name == &name {
+					watch = w
+					break
+				}
+			}
+			require.NotNil(t, watch)
+			require.Equal(t, types.DOWN, watch.status)
+			m.mu.RUnlock()
+			//require.Equal(t, types.DOWN, m.Status()["host-0"])
+		})
 	})
 
-	t.Run("add new host (the same, must not be added)", func(t *testing.T) {
-		require.Len(t, m.watchers, 2)
-		hosts.Hosts = append(hosts.Hosts, types.Host{
-			Name: "host-1",
-			URL:  ts.URL,
-			Success: &types.Success{
-				Code: []int{200},
-			},
-			SuccessThreshold:     2,
-			FailureThreshold:     3,
-			InitialDelayInterval: time.Millisecond * 10,
-			RetryInterval:        time.Millisecond * 30,
-			TimeoutInterval:      time.Millisecond * 100,
-			History: &types.HistoryCounts{
-				Check:   100,
-				Success: 0,
-				Failure: 0,
-			},
+	t.Run("hosts combinations", func(t *testing.T) {
+		t.Run("omit", func(t *testing.T) {
+			t.Run("same url and name", func(t *testing.T) {
+				initLen := len(m.watchers)
+				newHost := &types.Host{
+					Name:             &name,
+					URL:              ts.URL,
+					SuccessThreshold: &st,
+					FailureThreshold: &ft,
+					InitialDelay:     &idelay,
+					Interval:         &rd,
+					TimeoutInterval:  &td,
+				}
+				newHost.ID = newHost.GenerateID()
+				hosts.Hosts = append(hosts.Hosts, newHost)
+				require.NoError(t, m.Run(hosts))
+				time.Sleep(time.Millisecond * 10)
+				require.Len(t, m.watchers, initLen)
+			})
+			t.Run("same url and different name", func(t *testing.T) {
+				initLen := len(m.watchers)
+				newName := "host-1"
+				newHost := &types.Host{
+					Name:             &newName,
+					URL:              ts.URL,
+					SuccessThreshold: &st,
+					FailureThreshold: &ft,
+					InitialDelay:     &idelay,
+					Interval:         &rd,
+					TimeoutInterval:  &td,
+				}
+				newHost.ID = newHost.GenerateID()
+				hosts.Hosts = append(hosts.Hosts, newHost)
+				require.NoError(t, m.Run(hosts))
+				time.Sleep(time.Millisecond * 10)
+				require.Len(t, m.watchers, initLen)
+			})
+			t.Run("same url, same group and same name", func(t *testing.T) {
+				initLen := len(m.watchers)
+				newHost := &types.Host{
+					Name:             &name,
+					URL:              ts.URL,
+					Group:            &groupName,
+					SuccessThreshold: &st,
+					FailureThreshold: &ft,
+					InitialDelay:     &idelay,
+					Interval:         &rd,
+					TimeoutInterval:  &td,
+				}
+				newHost.ID = newHost.GenerateID()
+				hosts.Hosts = append(hosts.Hosts, newHost)
+				require.NoError(t, m.Run(hosts))
+				time.Sleep(time.Millisecond * 10)
+				require.Len(t, m.watchers, initLen)
+			})
 		})
-		require.NoError(t, m.Run(hosts))
-		require.Len(t, m.watchers, 2)
+		t.Run("add", func(t *testing.T) {
+			t.Run("different url and same name", func(t *testing.T) {
+				initLen := len(m.watchers)
+				newHost := &types.Host{
+					Name:             &name,
+					URL:              fmt.Sprintf("%s/1", ts.URL),
+					SuccessThreshold: &st,
+					FailureThreshold: &ft,
+					InitialDelay:     &idelay,
+					Interval:         &rd,
+					TimeoutInterval:  &td,
+				}
+				newHost.ID = newHost.GenerateID()
+				hosts.Hosts = append(hosts.Hosts, newHost)
+				require.NoError(t, m.Run(hosts))
+				time.Sleep(time.Millisecond * 10)
+				require.Len(t, m.watchers, initLen+1)
+			})
+			t.Run("different url and different name", func(t *testing.T) {
+				initLen := len(m.watchers)
+				newName := "host-1"
+				newHost := &types.Host{
+					Name:             &newName,
+					URL:              fmt.Sprintf("%s/2", ts.URL),
+					SuccessThreshold: &st,
+					FailureThreshold: &ft,
+					InitialDelay:     &idelay,
+					Interval:         &rd,
+					TimeoutInterval:  &td,
+				}
+				newHost.ID = newHost.GenerateID()
+				hosts.Hosts = append(hosts.Hosts, newHost)
+				require.NoError(t, m.Run(hosts))
+				time.Sleep(time.Millisecond * 10)
+				require.Len(t, m.watchers, initLen+1)
+			})
+			t.Run("same url and different group", func(t *testing.T) {
+				initLen := len(m.watchers)
+				newGroup := "group-1"
+				newHost := &types.Host{
+					Name:             &name,
+					URL:              ts.URL,
+					Group:            &newGroup,
+					SuccessThreshold: &st,
+					FailureThreshold: &ft,
+					InitialDelay:     &idelay,
+					Interval:         &rd,
+					TimeoutInterval:  &td,
+				}
+				newHost.ID = newHost.GenerateID()
+				hosts.Hosts = append(hosts.Hosts, newHost)
+				require.NoError(t, m.Run(hosts))
+				time.Sleep(time.Millisecond * 10)
+				require.Len(t, m.watchers, initLen+1)
+			})
+			t.Run("same url, same name and different name", func(t *testing.T) {
+				initLen := len(m.watchers)
+				newGroup := "group-3"
+				newHost := &types.Host{
+					Name:             &name,
+					URL:              ts.URL,
+					Group:            &newGroup,
+					SuccessThreshold: &st,
+					FailureThreshold: &ft,
+					InitialDelay:     &idelay,
+					Interval:         &rd,
+					TimeoutInterval:  &td,
+				}
+				newHost.ID = newHost.GenerateID()
+				hosts.Hosts = append(hosts.Hosts, newHost)
+				require.NoError(t, m.Run(hosts))
+				time.Sleep(time.Millisecond * 10)
+				require.Len(t, m.watchers, initLen+1)
+			})
+		})
+		t.Run("update", func(t *testing.T) {
+			hosts.Hosts[0].Group = &groupName
+			require.NoError(t, m.Run(hosts))
+			time.Sleep(time.Millisecond * 10)
+		})
 	})
 
 	t.Run("remove host", func(t *testing.T) {
-		require.Len(t, m.watchers, 2)
 		hosts.Hosts = hosts.Hosts[:1]
 		require.NoError(t, m.Run(hosts))
 		require.Len(t, m.watchers, 1)
 	})
 }
 
-func TestMonitor_Status(t *testing.T) {
-	m := Monitor{
-		watchers: []*watcher{
-			{
-				host: types.Host{
-					Name: "host-0",
-				},
-				history: engine.NewLocal(&types.HistoryCounts{}),
-			},
-			{
-				host: types.Host{
-					Name: "host-1",
-				},
-				history: engine.NewLocal(&types.HistoryCounts{}),
-				status:  types.UP,
-			},
-			{
-				host: types.Host{
-					Name: "host-2",
-				},
-				history: engine.NewLocal(&types.HistoryCounts{}),
-				status:  types.DOWN,
-			},
-		},
-	}
-
-	list := m.Status()
-	require.Equal(t, types.Unknown, list["host-0"])
-	require.Equal(t, types.UP, list["host-1"])
-	require.Equal(t, types.DOWN, list["host-2"])
-}
-
-func TestMonitor_Services(t *testing.T) {
-	t1 := time.Now().Add(-time.Minute)
-	t2 := time.Now().Add(time.Minute)
-
-	h1 := engine.NewLocal(&types.HistoryCounts{
-		Check:   10,
-		Success: 10,
-		Failure: 10,
-	})
-	h1.Add(types.HttpResponse{
-		Timestamp: time.Now(),
-		Status:    false,
-	})
-
-	h2 := engine.NewLocal(&types.HistoryCounts{
-		Check:   10,
-		Success: 10,
-		Failure: 10,
-	})
-	h2.Add(types.HttpResponse{
-		Timestamp: time.Now(),
-		Status:    false,
-	})
-	h2.Add(types.HttpResponse{
-		Timestamp: time.Now().Add(-time.Minute),
-		Status:    true,
-	})
-
-	m := Monitor{
-		watchers: []*watcher{
-			{
-				lastCheck: t1,
-				host: types.Host{
-					Name: "b",
-				},
-				history: h1,
-			},
-			{
-				host: types.Host{
-					Name: "a",
-				},
-				status:    types.UP,
-				lastCheck: t2,
-				history:   h2,
-			},
-		},
-	}
-
-	list := m.Services()
-
-	require.Equal(t, "b", list[0].Name)
-	require.Equal(t, "a", list[1].Name)
-
-	require.Equal(t, t1, list[0].Status.Timestamp)
-	require.Equal(t, t2, list[1].Status.Timestamp)
-}
-
 func srv(timeout time.Duration) (*httptest.Server, *atomic.Value, func()) {
-	router := chi.NewRouter()
+	router := http.NewServeMux()
 	status := atomic.Value{}
 	status.Store(true)
 
-	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(timeout)
 		if status.Load() == true {
-			rest.OkResponse(w)
+			w.WriteHeader(http.StatusOK)
 		} else {
-			rest.ErrorResponse(w, r, http.StatusInternalServerError, nil, "error")
+			http.Error(w, "error", http.StatusInternalServerError)
 		}
 	})
 

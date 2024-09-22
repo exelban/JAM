@@ -1,6 +1,9 @@
 package types
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -8,7 +11,7 @@ import (
 func TestHost_Status(t *testing.T) {
 	t.Run("code", func(t *testing.T) {
 		h := Host{
-			Success: &Success{
+			Conditions: &Success{
 				Code: []int{1, 2, 3},
 			},
 		}
@@ -23,7 +26,7 @@ func TestHost_Status(t *testing.T) {
 	t.Run("body", func(t *testing.T) {
 		str := "ok"
 		h := Host{
-			Success: &Success{
+			Conditions: &Success{
 				Code: []int{200},
 				Body: &str,
 			},
@@ -36,13 +39,42 @@ func TestHost_Status(t *testing.T) {
 }
 
 func TestHost_String(t *testing.T) {
+	n := "name"
 	name := Host{
-		Name: "name",
+		Name: &n,
+		URL:  "url",
 	}
 	url := Host{
 		URL: "url",
 	}
 
-	require.Equal(t, "name", name.String())
+	require.Equal(t, "name (url)", name.String())
 	require.Equal(t, "url", url.String())
+}
+
+func TestHost_GenerateID(t *testing.T) {
+	url := "url"
+	group := "group"
+	hasher := md5.New()
+
+	hasher.Write([]byte(url))
+	hash := hex.EncodeToString(hasher.Sum(nil))
+
+	hasher.Reset()
+	hasher.Write([]byte(fmt.Sprintf("%s%s", url, group)))
+	groupHash := hex.EncodeToString(hasher.Sum(nil))
+
+	t.Run("url only", func(t *testing.T) {
+		h := Host{
+			URL: url,
+		}
+		require.Equal(t, hash, h.GenerateID())
+	})
+	t.Run("url and group", func(t *testing.T) {
+		h := Host{
+			URL:   url,
+			Group: &group,
+		}
+		require.Equal(t, groupHash, h.GenerateID())
+	})
 }
