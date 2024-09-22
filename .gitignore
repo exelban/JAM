@@ -2,5 +2,5 @@
 .DS_Store
 config.yaml
 mock_test.go
-db
+*.db
 .run

@@ -72,7 +72,7 @@ func (w *watcher) check() {
 	}
 	w.mu.Unlock()
 
-	log.Printf("[DEBUG] %s: %s status", w.host.String(), w.status)
+	log.Printf("[DEBUG] %s: %s status (%d - %s)", w.host.String(), w.status, resp.Code, resp.Body)
 }
 
 // validate - set status based on response status and thresholds

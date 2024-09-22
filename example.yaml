@@ -1,0 +1,29 @@
+hosts:
+  - name: Facebook
+    url: https://www.facebook.com
+    group: Social
+  - name: Instagram
+    url: https://www.instagram.com
+    group: Social
+  - name: YouTube
+    url: https://www.youtube.com
+    group: Social
+
+  - name: Google
+    url: https://www.google.com
+
+  - name: Reddit
+    url: https://www.reddit.com
+
+  - url: https://api.serhiy.io/v1/stats/ping
+    name: ping
+    group: Stats
+    hidden: true
+  - url: https://api.serhiy.io/v1/stats/release/latest
+    name: Last release API
+    group: Stats
+    hidden: true
+  - url: https://api.serhiy.io/v1/stats/ip
+    name: IP address API
+    group: Stats
+    hidden: true

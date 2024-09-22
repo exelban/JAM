@@ -58,33 +58,22 @@ func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 		}
 	}
 
-	if cfg.LivenessInterval != nil {
-		log.Printf("[INFO] Liveness interval is enabled every %s", cfg.LivenessInterval)
-		tk := time.NewTicker(*cfg.LivenessInterval)
-		go func() {
-		loop:
-			for {
-				select {
-				case <-tk.C:
+	go func() {
+	loop:
+		for {
+			select {
+			case <-ctx.Done():
+				if cfg.Alerts.ShutdownMessage {
 					for _, client := range n.clients {
-						if err := client.send("Liveness check"); err != nil {
-							log.Printf("[ERROR] Liveness check: %s", err)
+						if err := client.send("Going offline..."); err != nil {
+							log.Printf("[ERROR] send shutdown message: %s", err)
 						}
 					}
-				case <-ctx.Done():
-					tk.Stop()
-					if cfg.Alerts.ShutdownMessage {
-						for _, client := range n.clients {
-							if err := client.send("Going offline..."); err != nil {
-								log.Printf("[ERROR] send shutdown message: %s", err)
-							}
-						}
-					}
-					break loop
 				}
+				break loop
 			}
-		}()
-	}
+		}
+	}()
 
 	return n, nil
 }

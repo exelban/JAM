@@ -39,12 +39,12 @@ type Storage struct {
 type Cfg struct {
 	MaxConn int `json:"maxConn" yaml:"maxConn,omitempty"`
 
-	Interval         time.Duration  `json:"interval,omitempty" yaml:"interval,omitempty"`
-	Timeout          time.Duration  `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	InitialDelay     *time.Duration `json:"initialDelay,omitempty" yaml:"initialDelay,omitempty"`
-	LivenessInterval *time.Duration `json:"livenessInterval,omitempty" yaml:"livenessInterval,omitempty"`
-	SuccessThreshold int            `json:"successThreshold" yaml:"successThreshold,omitempty"`
-	FailureThreshold int            `json:"failureThreshold" yaml:"failureThreshold,omitempty"`
+	Interval     time.Duration  `json:"interval,omitempty" yaml:"interval,omitempty"`
+	Timeout      time.Duration  `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	InitialDelay *time.Duration `json:"initialDelay,omitempty" yaml:"initialDelay,omitempty"`
+	
+	SuccessThreshold int `json:"successThreshold" yaml:"successThreshold,omitempty"`
+	FailureThreshold int `json:"failureThreshold" yaml:"failureThreshold,omitempty"`
 
 	Conditions *Success          `json:"success" yaml:"success,omitempty"`
 	Headers    map[string]string `json:"headers" yaml:"headers,omitempty"`
