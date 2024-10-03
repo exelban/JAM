@@ -9,14 +9,18 @@ import (
 	"github.com/exelban/JAM/pkg/monitor"
 	"github.com/exelban/JAM/store"
 	"github.com/exelban/JAM/types"
-	"github.com/pkgz/service"
+	"github.com/jessevdk/go-flags"
+	"github.com/pkgz/logg"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
-type args struct {
+type arguments struct {
 	ConfigPath string `long:"config-path" env:"CONFIG_PATH" default:"./config.yaml" description:"path to the configuration file"`
-	service.ARGS
+	Port       int    `long:"port" env:"PORT" default:"8822" description:"service rest port"`
+	Debug      bool   `long:"debug" env:"DEBUG" description:"debug mode"`
 }
 
 type app struct {
@@ -26,7 +30,7 @@ type app struct {
 	config *types.Cfg
 	store  store.Interface
 
-	args args
+	args arguments
 }
 
 //go:embed templates/*
@@ -37,11 +41,25 @@ const version = "v0.0.0"
 func main() {
 	log.Printf("uptime %s", version)
 
-	var args args
-	ctx, _, err := service.Init(&args)
-	if err != nil {
-		fmt.Printf("error init: %v", err)
+	var args arguments
+	p := flags.NewParser(&args, flags.Default)
+	if _, err := p.Parse(); err != nil {
+		fmt.Printf("error parse args: %v", err)
 		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		stop := make(chan os.Signal, 1)
+		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+		<-stop
+		log.Print("[INFO] interrupt signal")
+		cancel()
+	}()
+
+	logg.NewGlobal(os.Stdout)
+	if args.Debug {
+		logg.DebugMode()
 	}
 
 	app, err := create(ctx, args)
@@ -56,7 +74,7 @@ func main() {
 	}
 }
 
-func create(ctx context.Context, args args) (*app, error) {
+func create(ctx context.Context, args arguments) (*app, error) {
 	log.Printf("[DEBUG] %+v", args)
 
 	cfg, err := types.NewConfig(ctx, args.ConfigPath)

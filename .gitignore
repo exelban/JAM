@@ -4,3 +4,4 @@ config.yaml
 mock_test.go
 *.db
 .run
+release

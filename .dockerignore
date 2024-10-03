@@ -6,3 +6,5 @@ mock_test.go
 *.db
 .run
 example.yaml
+release
+release.sh
