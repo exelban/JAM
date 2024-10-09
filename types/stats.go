@@ -26,6 +26,7 @@ type Details struct {
 type Stat struct {
 	ID           string
 	Name         *string
+	Description  *string
 	Host         string
 	Status       StatusType
 	Uptime       int

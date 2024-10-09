@@ -11,9 +11,7 @@ hosts:
 
   - name: Google
     url: https://www.google.com
-
-  - name: Reddit
-    url: https://www.reddit.com
+    description: Google search engine
 
   - url: https://api.serhiy.io/v1/stats/ping
     name: ping
