@@ -101,7 +101,7 @@
           </p>
           <div class="spacer"></div>
           {{ if $root.IsHost }}
-          <p>~{{ .ResponseTime }}</p>
+          <span data-tooltip="Average response time for selected time range">~{{ .ResponseTime }}</span>
           {{ else }}
           <p>{{ .Uptime }}% uptime</p>
           {{ end }}
@@ -165,7 +165,15 @@
         <p>Uptime 24h</p>
       </div>
     </div>
+    {{ end }}
+  </section>
+
+  {{ if .IsHost }}
+  <section>
     <div class="panel blocks">
+      <div class="block">
+        <img src="/response-time/{{ (index .Hosts 0).ID }}">
+      </div>
       <div class="block">
         <p>{{ index ((index .Hosts 0).Details.ResponseTime) 0 }}</p>
         <p>Response time 30d</p>
@@ -179,8 +187,8 @@
         <p>Response time 24h</p>
       </div>
     </div>
-    {{ end }}
   </section>
+  {{ end }}
 
   {{ if .Events }}
   <section>

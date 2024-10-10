@@ -139,6 +139,7 @@ func (m *Monitor) StatsByID(ctx context.Context, id string, dayReport bool) (*ty
 			{
 				ID:           w.host.ID,
 				Name:         w.host.Name,
+				Description:  w.host.Description,
 				Host:         w.host.URL,
 				Status:       status,
 				Uptime:       uptime,
@@ -152,6 +153,48 @@ func (m *Monitor) StatsByID(ctx context.Context, id string, dayReport bool) (*ty
 	w.mu.RUnlock()
 
 	return s, nil
+}
+
+func (m *Monitor) ResponseTime(ctx context.Context, id string) ([]time.Time, []float64, error) {
+	history, err := m.Store.History(ctx, id, -1)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get history: %w", err)
+	}
+
+	// aggregate data per day
+	days := make(map[time.Time][]*types.HttpResponse)
+	for _, r := range history {
+		day := time.Date(r.Timestamp.Year(), r.Timestamp.Month(), r.Timestamp.Day(), 0, 0, 0, 0, r.Timestamp.Location())
+		if _, ok := days[day]; !ok {
+			days[day] = make([]*types.HttpResponse, 0)
+		}
+		days[day] = append(days[day], r)
+	}
+
+	// calculate average response time per day
+	list := make(map[time.Time]float64)
+	for hour, responses := range days {
+		var sum float64
+		for _, r := range responses {
+			sum += float64(r.Time.Milliseconds())
+		}
+		list[hour] = sum / float64(len(responses))
+	}
+
+	keys := make([]time.Time, 0, len(list))
+	for k := range list {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].Before(keys[j])
+	})
+
+	values := make([]float64, 0, len(list))
+	for _, k := range keys {
+		values = append(values, list[k])
+	}
+
+	return keys, values, nil
 }
 
 // genChart - generates the chart for the host.
