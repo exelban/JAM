@@ -1,5 +1,7 @@
 # JAM
 
+<a href="https://github.com/exelban/JAM"><p align="center"><img src="https://github.com/exelban/JAM/raw/master/templates/static/icon.png" width="120"></p></a>
+
 [![JAM](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/JAM/cover.png)](https://github.com/exelban/JAM)
 
 Just Another Monitoring
@@ -28,7 +30,7 @@ Also you can build it from the source code or use the precompiled binaries. But 
 
 ### Docker
 ```bash
-docker run -d -v ./jam.yaml:/app/config.yaml exelban/jam:latest
+docker run -d -v ./jam.yaml:/app/config.yaml -v ./data/:/app/data exelban/jam:latest
 ```
 
 ### Docker Compose
@@ -40,6 +42,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./jam.yaml:/app/config.yaml
+      - ./data:/app/data
     logging:
       driver: "json-file"
       options:

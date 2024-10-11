@@ -31,28 +31,22 @@ type Alerts struct {
 	ShutdownMessage       bool  `json:"shutdownMessage" yaml:"shutdownMessage"`
 }
 
-type Storage struct {
-	Type string  `json:"type" yaml:"type"`
-	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
-}
-
 type Cfg struct {
 	MaxConn int `json:"maxConn" yaml:"maxConn,omitempty"`
 
 	Interval     time.Duration  `json:"interval,omitempty" yaml:"interval,omitempty"`
 	Timeout      time.Duration  `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	InitialDelay *time.Duration `json:"initialDelay,omitempty" yaml:"initialDelay,omitempty"`
-	
+
 	SuccessThreshold int `json:"successThreshold" yaml:"successThreshold,omitempty"`
 	FailureThreshold int `json:"failureThreshold" yaml:"failureThreshold,omitempty"`
 
 	Conditions *Success          `json:"success" yaml:"success,omitempty"`
 	Headers    map[string]string `json:"headers" yaml:"headers,omitempty"`
 
-	Alerts    Alerts   `json:"alerts" yaml:"alerts,omitempty"`
-	Storage   *Storage `json:"storage" yaml:"storage,omitempty"`
-	FileHosts []*Host  `json:"hosts" yaml:"hosts"`
-	Hosts     []*Host  `json:"-" yaml:"-"`
+	Alerts    Alerts  `json:"alerts" yaml:"alerts,omitempty"`
+	FileHosts []*Host `json:"hosts" yaml:"hosts"`
+	Hosts     []*Host `json:"-" yaml:"-"`
 
 	path        string    `yaml:"-"`
 	initialized bool      `yaml:"-"`

@@ -8,3 +8,4 @@ mock_test.go
 example.yaml
 release
 release.sh
+data

@@ -5,3 +5,4 @@ mock_test.go
 *.db
 .run
 release
+data

@@ -6,6 +6,7 @@ import (
 	"github.com/exelban/JAM/types"
 	"log"
 	"math/rand/v2"
+	"os"
 	"time"
 )
 
@@ -18,25 +19,28 @@ type Interface interface {
 	Close() error
 }
 
-func New(ctx context.Context, cfg *types.Cfg) (Interface, error) {
+func New(ctx context.Context, typ string, cfg *types.Cfg) (Interface, error) {
 	var store Interface
 
-	if cfg != nil && cfg.Storage != nil {
-		path := "./jam.db"
-		if cfg.Storage.Path != nil {
-			path = fmt.Sprintf("%s/jam.db", *cfg.Storage.Path)
+	dbPath := "./data"
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		if err := os.Mkdir(dbPath, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create data directory: %w", err)
 		}
+	}
+	dbFilePath := fmt.Sprintf("%s/%s", dbPath, "jam.db")
 
-		switch cfg.Storage.Type {
-		case "bolt":
-			s, err := NewBolt(ctx, path)
-			if err != nil {
-				return nil, err
-			}
-			store = s
-		}
-	} else {
+	switch typ {
+	case "memory":
 		store = NewMemory(ctx)
+		log.Printf("[INFO] using memory storage")
+	default:
+		s, err := NewBolt(ctx, dbFilePath)
+		if err != nil {
+			return nil, err
+		}
+		store = s
+		log.Printf("[INFO] using bolt storage")
 	}
 
 	if err := Aggregate(ctx, store); err != nil {

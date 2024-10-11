@@ -19,8 +19,11 @@ import (
 
 type arguments struct {
 	ConfigPath string `long:"config-path" env:"CONFIG_PATH" default:"./config.yaml" description:"path to the configuration file"`
-	Port       int    `long:"port" env:"PORT" default:"8822" description:"service rest port"`
-	Debug      bool   `long:"debug" env:"DEBUG" description:"debug mode"`
+
+	StorageType string `long:"storage-type" env:"STORAGE_TYPE" default:"bolt" description:"storage type"`
+
+	Port  int  `long:"port" env:"PORT" default:"8822" description:"service rest port"`
+	Debug bool `long:"debug" env:"DEBUG" description:"debug mode"`
 }
 
 type app struct {
@@ -82,7 +85,7 @@ func create(ctx context.Context, args arguments) (*app, error) {
 		return nil, fmt.Errorf("new config: %w", err)
 	}
 
-	storage, err := store.New(ctx, cfg)
+	storage, err := store.New(ctx, args.StorageType, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("new store: %w", err)
 	}
