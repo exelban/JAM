@@ -43,10 +43,11 @@ type HttpResponse struct {
 	Status     bool       `json:"status,omitempty"`
 	StatusType StatusType `json:"statusType,omitempty"`
 
-	DNS          time.Duration `json:"DNS,omitempty"`
-	TLSHandshake time.Duration `json:"TLSHandshake,omitempty"`
-	Connect      time.Duration `json:"connect,omitempty"`
-	TTFB         time.Duration `json:"TTFB,omitempty"`
+	DNS           time.Duration `json:"DNS,omitempty"`
+	TLSHandshake  time.Duration `json:"TLSHandshake,omitempty"`
+	Connect       time.Duration `json:"connect,omitempty"`
+	TTFB          time.Duration `json:"TTFB,omitempty"`
+	SSLCertExpiry *time.Time    `json:"SSLExpiry,omitempty"`
 
 	IsAggregated bool    `json:"isAggregated"`
 	Uptime       float64 `json:"uptime,omitempty"` // aggregation uptime

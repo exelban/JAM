@@ -16,10 +16,24 @@ type Chart struct {
 	Intervals []string
 }
 
+// SSLDetails is a struct that contains the expiration date of the SSL certificate.
+// LastOutageDetails is a struct that contains the duration of the last outage.
+type SSLDetails struct {
+	ExpireInDays int
+	ExpireTS     string
+}
+type LastOutageDetails struct {
+	Duration string
+	Since    string
+	TS       string
+}
+
 // Details is a struct that contains the uptime and response time of a host.
 type Details struct {
-	Uptime       []string
-	ResponseTime []string
+	Uptime       string
+	ResponseTime string
+	SSL          *SSLDetails
+	LastOutage   *LastOutageDetails
 }
 
 // Stat is a struct that contains the stats of a host.

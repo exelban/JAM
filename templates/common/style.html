@@ -72,21 +72,10 @@
       &:last-child {
         border-bottom: none;
       }
-
-      h1 {
-        width: 100%;
-        font-size: 16px;
-        font-weight: 400;
-        color: var(--color-fg);
-        margin: 0;
-        padding: 0;
-      }
     }
-
     .container, &.container {
       gap: 6px;
     }
-
     section {
       width: calc(100% - 2px);
       background: var(--color-fg-reverse);
@@ -133,7 +122,7 @@
           gap: 4px;
           p, a {
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             &:nth-child(2) {
               font-size: 13px;
               font-weight: 300;
@@ -300,27 +289,45 @@
           }
         }
       }
-      .blocks {
-        display: flex;
+      &.details {
+        width: 100%;
+        gap: 6px;
         flex-direction: row;
-        justify-content: space-around;
         flex-wrap: wrap;
+        background: transparent;
+        border: none;
 
-        .block {
-          padding: 14px 0;
-          text-align: center;
-          img {
-            max-width: 100%;
-            max-height: 100%;
-          }
-          p:first-child {
-            font-size: 22px;
-            font-weight: 700;
-          }
-          p:last-child {
-            font-size: 12px;
-            color: var(--color-subtitle);
-          }
+        .panel {
+          flex-grow: 1;
+          flex-basis: 0;
+          align-self: stretch;
+          background: var(--color-fg-reverse);
+          border: solid var(--color-section-bg) 1px;
+        }
+
+        h2 {
+          font-size: 20px;
+          font-weight: 600;
+          color: var(--color-fg);
+          margin: 6px 0 0 0;
+          padding: 0;
+        }
+        h3 {
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--color-subtitle);
+          margin: 0;
+          padding: 0;
+        }
+
+        .time {
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;
+        }
+
+        @media only screen and (max-width: 600px) {
+          flex-direction: column;
         }
       }
       .event {
@@ -366,6 +373,10 @@
             color: var(--color-subtitle);
           }
         }
+      }
+      img {
+        max-width: 100%;
+        max-height: 100%;
       }
 
       .head:has(input:checked) ~ .services {
@@ -466,7 +477,7 @@
     .container {
       width: 96%;
     }
-    header, section {
+    header, section, .panel {
       border-radius: 3px;
     }
     footer > section {

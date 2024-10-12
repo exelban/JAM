@@ -21,11 +21,15 @@ func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.Ht
 	}
 
 	var start, connect, dns, tlsHandshake time.Time
+	var tlsState *tls.ConnectionState
 	req = req.WithContext(httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
-		DNSStart:             func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
-		DNSDone:              func(ddi httptrace.DNSDoneInfo) { response.DNS = time.Since(dns) },
-		TLSHandshakeStart:    func() { tlsHandshake = time.Now() },
-		TLSHandshakeDone:     func(cs tls.ConnectionState, err error) { response.TLSHandshake = time.Since(tlsHandshake) },
+		DNSStart:          func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
+		DNSDone:           func(ddi httptrace.DNSDoneInfo) { response.DNS = time.Since(dns) },
+		TLSHandshakeStart: func() { tlsHandshake = time.Now() },
+		TLSHandshakeDone: func(cs tls.ConnectionState, err error) {
+			response.TLSHandshake = time.Since(tlsHandshake)
+			tlsState = &cs
+		},
 		ConnectStart:         func(network, addr string) { connect = time.Now() },
 		ConnectDone:          func(network, addr string, err error) { response.Connect = time.Since(connect) },
 		GotFirstResponseByte: func() { response.TTFB = time.Since(start) },
@@ -61,6 +65,10 @@ func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.Ht
 	}
 	response.Time = time.Since(startTime)
 	response.Code = resp.StatusCode
+
+	if tlsState != nil && len(tlsState.PeerCertificates) > 0 {
+		response.SSLCertExpiry = &tlsState.PeerCertificates[0].NotAfter
+	}
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {

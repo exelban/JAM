@@ -119,7 +119,7 @@ func (m *Monitor) StatsByID(ctx context.Context, id string, dayReport bool) (*ty
 
 	var details *types.Details
 	if !dayReport {
-		details = genUptimeAndResponseTime(history)
+		details = getDetails(history)
 	}
 
 	if !dayReport && len(history) > 90 {
@@ -271,6 +271,10 @@ func genChart(history []*types.HttpResponse, interval time.Duration, dayReport b
 		uptime = (uptime * 100) / (len(points) - unknown)
 	}
 
+	sort.Slice(points, func(i, j int) bool {
+		return points[i].TS.Before(points[j].TS)
+	})
+
 	return types.Chart{
 		Points:    points,
 		Intervals: genIntervals(points),
@@ -315,39 +319,17 @@ func genIntervals(points []*types.Point) []string {
 	}
 	return intervals
 }
-func genUptimeAndResponseTime(responses []*types.HttpResponse) *types.Details {
+func getDetails(responses []*types.HttpResponse) *types.Details {
 	d := &types.Details{}
 
 	last30DaysUp := 0
 	last30DaysCount := 0
 	uptime30Days := 0.0
 	responseTime30Days := time.Duration(0)
-
-	last7DaysUp := 0
-	last7DaysCount := 0
-	uptime7Days := 0.0
-	responseTime7Days := time.Duration(0)
-
-	last24HoursUp := 0
-	last24HoursCount := 0
-	uptime24Hours := 0.0
-	responseTime24Hours := time.Duration(0)
+	var lastOutageTS *time.Time
+	var lastOutageUpTS *time.Time
 
 	for _, r := range responses {
-		if r.Timestamp.After(time.Now().Add(-time.Hour * 24)) {
-			last24HoursCount++
-			if r.StatusType != types.DOWN {
-				last24HoursUp++
-			}
-			responseTime24Hours += r.Time
-		}
-		if r.Timestamp.After(time.Now().Add(-time.Hour * 24 * 7)) {
-			last7DaysCount++
-			if r.StatusType != types.DOWN {
-				last7DaysUp++
-			}
-			responseTime7Days += r.Time
-		}
 		if r.Timestamp.After(time.Now().Add(-time.Hour * 24 * 30)) {
 			last30DaysCount++
 			if r.StatusType != types.DOWN {
@@ -355,43 +337,46 @@ func genUptimeAndResponseTime(responses []*types.HttpResponse) *types.Details {
 			}
 			responseTime30Days += r.Time
 		}
+		if r.StatusType == types.DOWN {
+			if lastOutageTS == nil {
+				lastOutageTS = &r.Timestamp
+			} else if lastOutageTS.Before(r.Timestamp) {
+				lastOutageTS = &r.Timestamp
+			}
+		} else if lastOutageTS != nil && lastOutageUpTS == nil {
+			lastOutageUpTS = &r.Timestamp
+		}
 	}
 
 	uptime30Days = float64(last30DaysUp) * 100 / float64(last30DaysCount)
 	if last30DaysUp != 0 {
 		responseTime30Days /= time.Duration(last30DaysUp)
 	}
-
 	if uptime30Days == math.Trunc(uptime30Days) {
-		d.Uptime = append(d.Uptime, fmt.Sprintf("%.0f", uptime30Days))
+		d.Uptime = fmt.Sprintf("%.0f", uptime30Days)
 	} else {
-		d.Uptime = append(d.Uptime, fmt.Sprintf("%.1f", uptime30Days))
+		d.Uptime = fmt.Sprintf("%.1f", uptime30Days)
+	}
+	d.ResponseTime = formatDuration(responseTime30Days)
+
+	if lastOutageTS != nil {
+		d.LastOutage = &types.LastOutageDetails{
+			Since: formatDuration(time.Since(*lastOutageTS)),
+			TS:    lastOutageTS.Format("January 2, 2006 15:04:05"),
+		}
+		if lastOutageUpTS != nil {
+			d.LastOutage.Duration = formatDuration(lastOutageUpTS.Sub(*lastOutageTS))
+		} else {
+			d.LastOutage.Duration = formatDuration(time.Since(*lastOutageTS))
+		}
 	}
 
-	uptime7Days = float64(last7DaysUp) * 100 / float64(last7DaysCount)
-	if last7DaysUp != 0 {
-		responseTime7Days /= time.Duration(last7DaysUp)
-	}
-	if uptime7Days == math.Trunc(uptime7Days) {
-		d.Uptime = append(d.Uptime, fmt.Sprintf("%.0f", uptime7Days))
-	} else {
-		d.Uptime = append(d.Uptime, fmt.Sprintf("%.1f", uptime7Days))
-	}
-
-	uptime24Hours = float64(last24HoursUp) * 100 / float64(last24HoursCount)
-	if last24HoursUp != 0 {
-		responseTime24Hours /= time.Duration(last24HoursUp)
-	}
-	if uptime24Hours == math.Trunc(uptime24Hours) {
-		d.Uptime = append(d.Uptime, fmt.Sprintf("%.0f", uptime24Hours))
-	} else {
-		d.Uptime = append(d.Uptime, fmt.Sprintf("%.1f", uptime24Hours))
-	}
-
-	d.ResponseTime = []string{
-		formatDuration(responseTime30Days),
-		formatDuration(responseTime7Days),
-		formatDuration(responseTime24Hours),
+	if len(responses) > 0 && responses[len(responses)-1].SSLCertExpiry != nil {
+		expireAt := responses[len(responses)-1].SSLCertExpiry
+		d.SSL = &types.SSLDetails{
+			ExpireInDays: int(expireAt.Sub(time.Now()).Hours() / 24),
+			ExpireTS:     expireAt.Format("January 2, 2006"),
+		}
 	}
 
 	return d
