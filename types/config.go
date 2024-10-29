@@ -146,12 +146,6 @@ func (c *Cfg) Validate() error {
 	} else if len(c.Conditions.Code) == 0 {
 		c.Conditions.Code = []int{200, 201, 202, 203, 204, 205, 206, 207, 208}
 	}
-	if c.SuccessThreshold == 0 {
-		c.SuccessThreshold = 2
-	}
-	if c.FailureThreshold == 0 {
-		c.FailureThreshold = 3
-	}
 
 	for i, host := range c.FileHosts {
 		if host.URL == "" {

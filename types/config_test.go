@@ -228,10 +228,10 @@ func TestConfig_Validate(t *testing.T) {
 				}
 				require.NoError(t, cfg.Validate())
 				require.NotNil(t, cfg.Hosts[0].SuccessThreshold)
-				require.Equal(t, 2, *cfg.Hosts[0].SuccessThreshold)
+				require.Equal(t, 0, *cfg.Hosts[0].SuccessThreshold)
 
 				require.NotNil(t, cfg.Hosts[0].FailureThreshold)
-				require.Equal(t, 3, *cfg.Hosts[0].FailureThreshold)
+				require.Equal(t, 0, *cfg.Hosts[0].FailureThreshold)
 			})
 			t.Run("custom", func(t *testing.T) {
 				cfg := &Cfg{
