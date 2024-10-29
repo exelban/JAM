@@ -343,15 +343,13 @@ func TestConfig_Reload(t *testing.T) {
 		addr := fmt.Sprintf("%p", cfg.Hosts[0])
 		require.Equal(t, "test", cfg.Hosts[0].URL)
 
-		_, _ = jsonFile.WriteAt([]byte(`{"hosts": [{"url": "test", "name": "test", "hidden": true, "description": "test", "group": "test", "tags": ["test"], "method": "test"}]}`), 0)
+		_, _ = jsonFile.WriteAt([]byte(`{"hosts": [{"url": "test", "name": "test", "hidden": true, "description": "test", "group": "test", "method": "test"}]}`), 0)
 		require.NoError(t, cfg.Parse())
 		require.NoError(t, cfg.Validate())
 
 		require.Equal(t, "test", *cfg.Hosts[0].Name)
 		require.Equal(t, "test", *cfg.Hosts[0].Description)
 		require.Equal(t, "test", *cfg.Hosts[0].Group)
-		require.Len(t, cfg.Hosts[0].Tags, 1)
-		require.Equal(t, "test", cfg.Hosts[0].Tags[0])
 		require.Equal(t, "test", cfg.Hosts[0].Method)
 		require.True(t, cfg.Hosts[0].Hidden)
 
@@ -379,8 +377,6 @@ func TestConfig_Reload(t *testing.T) {
 - name: test
   description: test
   group: test
-  tags:
-    - test
   method: test
   url: test
   hidden: true`), 0)
@@ -390,8 +386,6 @@ func TestConfig_Reload(t *testing.T) {
 		require.Equal(t, "test", *cfg.Hosts[0].Name)
 		require.Equal(t, "test", *cfg.Hosts[0].Description)
 		require.Equal(t, "test", *cfg.Hosts[0].Group)
-		require.Len(t, cfg.Hosts[0].Tags, 1)
-		require.Equal(t, "test", cfg.Hosts[0].Tags[0])
 		require.Equal(t, "test", cfg.Hosts[0].Method)
 		require.True(t, cfg.Hosts[0].Hidden)
 

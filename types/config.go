@@ -257,7 +257,6 @@ func (c *Cfg) updateHost(at int, host *Host) {
 	c.Hosts[at].Name = host.Name
 	c.Hosts[at].Description = host.Description
 	c.Hosts[at].Group = host.Group
-	c.Hosts[at].Tags = host.Tags
 
 	c.Hosts[at].Method = host.Method
 

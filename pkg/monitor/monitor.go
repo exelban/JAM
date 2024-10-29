@@ -16,8 +16,7 @@ type Monitor struct {
 	dialer *dialer.Dialer
 	notify *notify.Notify
 
-	watchers   map[string]*watcher
-	tagsColors map[string]string
+	watchers map[string]*watcher
 
 	mu   sync.RWMutex
 	ctx  context.Context
@@ -28,7 +27,6 @@ type Monitor struct {
 func (m *Monitor) Run(cfg *types.Cfg) error {
 	m.once.Do(func() {
 		m.watchers = make(map[string]*watcher)
-		m.tagsColors = make(map[string]string)
 	})
 
 	m.mu.Lock()
@@ -91,14 +89,7 @@ func (m *Monitor) add(host *types.Host) error {
 	go w.run(m.ctx)
 
 	m.mu.Lock()
-	{
-		m.watchers[host.ID] = w
-		for _, tag := range host.Tags {
-			if _, ok := m.tagsColors[tag]; !ok {
-				m.tagsColors[tag] = types.RandomColor()
-			}
-		}
-	}
+	m.watchers[host.ID] = w
 	m.mu.Unlock()
 
 	return nil

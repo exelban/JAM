@@ -21,10 +21,9 @@ type Host struct {
 	ID   string   `json:"id" yaml:"-"`
 	Type HostType `json:"type" yaml:"-"`
 
-	Name        *string  `json:"name,omitempty" yaml:"name,omitempty"`
-	Description *string  `json:"description,omitempty" yaml:"description,omitempty"`
-	Group       *string  `json:"group,omitempty" yaml:"group,omitempty"`
-	Tags        []string `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Name        *string `json:"name,omitempty" yaml:"name,omitempty"`
+	Description *string `json:"description,omitempty" yaml:"description,omitempty"`
+	Group       *string `json:"group,omitempty" yaml:"group,omitempty"`
 
 	Method string `json:"method,omitempty" yaml:"method,omitempty"`
 	URL    string `json:"url" yaml:"url"`
