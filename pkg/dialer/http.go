@@ -57,10 +57,11 @@ func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.Ht
 		client.Timeout = *h.TimeoutInterval
 	}
 
+	response.Timestamp = time.Now()
+
 	startTime := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[ERROR] make request %v", err)
 		return
 	}
 	response.Time = time.Since(startTime)
@@ -78,7 +79,6 @@ func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.Ht
 	if len(b) < 1024 {
 		response.Bytes = b
 	}
-	response.Timestamp = time.Now()
 	response.OK = true
 
 	return

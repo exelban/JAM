@@ -58,16 +58,13 @@ func (w *watcher) run(ctx context.Context) {
 // check - call to the host and check host status
 func (w *watcher) check() {
 	resp := w.dialer.Dial(w.ctx, w.host)
-	if !resp.OK {
-		return
-	}
 
 	w.mu.Lock()
 	resp.Status = w.host.Status(resp.Code, resp.Bytes)
 	w.lastCheck = time.Now()
 	w.validate(resp.Status)
 	resp.StatusType = w.status
-	if err := w.store.Add(w.ctx, w.host.ID, &resp); err != nil {
+	if err := w.store.AddResponse(w.ctx, w.host.ID, &resp); err != nil {
 		log.Printf("[ERROR] save response to db %s: %s", w.host.String(), err)
 	}
 	w.mu.Unlock()
