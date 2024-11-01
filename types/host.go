@@ -3,7 +3,7 @@ package types
 import (
 	"bytes"
 	"crypto/md5"
-	"encoding/hex"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -55,7 +55,8 @@ func (h *Host) GenerateID() string {
 		input = append(input, []byte(*h.Group)...)
 	}
 	hasher.Write(input)
-	return hex.EncodeToString(hasher.Sum(nil))
+	hash := hasher.Sum(nil)
+	return base64.URLEncoding.EncodeToString(hash)[:6]
 }
 
 // Status - checking if provided code present in the success code list and body is equal
