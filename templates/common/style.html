@@ -315,48 +315,39 @@
           flex-direction: column;
         }
       }
-      .event {
+      .incident {
         flex-direction: row;
         flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        padding: 20px 0;
+        padding: 18px 0;
 
-        .details {
-          display: flex;
-          flex-direction: row;
+        .head, .info {
           flex-wrap: wrap;
-          align-items: center;
           gap: 10px;
+        }
 
-          .icon {
-            width: 26px;
-            height: 26px;
-            border-radius: 26px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            svg {
-              width: 15px;
-              height: 15px;
-              color: var(--color-bg);
-            }
-          }
-          p {
-            font-size: 16px;
-            font-weight: 600;
-          }
+        .icon {
+          width: 26px;
+          height: 26px;
+          border-radius: 26px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          color: var(--color-white);
+        }
+        h3 {
+          font-size: 14px;
+          font-weight: 500;
+          white-space: normal;
+          color: var(--color-fg);
+          margin: 0;
+          padding: 0;
         }
         .ts {
-          display: flex;
-          flex-direction: row;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: 4px;
-          p {
-            font-size: 13px;
-            color: var(--color-subtitle);
-          }
+          font-size: 13px;
+          color: var(--color-subtitle);
+          text-align: end;
         }
       }
       img {

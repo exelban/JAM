@@ -60,11 +60,11 @@ func TestMonitor_Stats(t *testing.T) {
 		}
 
 		for _, r := range generateDays(30) {
-			_ = m.Store.Add(ctx, "test", r)
+			_ = m.Store.AddResponse(ctx, "test", r)
 		}
 		require.NoError(t, store.Aggregate(ctx, m.Store))
 
-		history, err := m.Store.History(ctx, "test", -1)
+		history, err := m.Store.FindResponses(ctx, "test")
 		require.NoError(t, err)
 		require.NotEmpty(t, history)
 
@@ -105,14 +105,14 @@ func TestMonitor_Stats(t *testing.T) {
 
 		now := time.Now()
 		for i := 0; i < rand.IntN(1000-100)+100; i++ {
-			_ = m.Store.Add(ctx, "test", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
+			_ = m.Store.AddResponse(ctx, "test", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
 		}
 		for _, r := range generateDays(rand.IntN(1000-100) + 100) {
-			_ = m.Store.Add(ctx, "test", r)
+			_ = m.Store.AddResponse(ctx, "test", r)
 		}
 		require.NoError(t, store.Aggregate(ctx, m.Store))
 
-		history, err := m.Store.History(ctx, "test", -1)
+		history, err := m.Store.FindResponses(ctx, "test")
 		require.NoError(t, err)
 		require.NotEmpty(t, history)
 		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -166,14 +166,14 @@ func TestMonitor_Stats(t *testing.T) {
 
 		now := time.Now()
 		for i := 0; i < rand.IntN(1000-100)+100; i++ {
-			_ = m.Store.Add(ctx, "test", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
+			_ = m.Store.AddResponse(ctx, "test", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
 		}
 		for _, r := range generateDays(rand.IntN(1000-100) + 100) {
-			_ = m.Store.Add(ctx, "test", r)
+			_ = m.Store.AddResponse(ctx, "test", r)
 		}
 		require.NoError(t, store.Aggregate(ctx, m.Store))
 
-		history, err := m.Store.History(ctx, "test", -1)
+		history, err := m.Store.FindResponses(ctx, "test")
 		require.NoError(t, err)
 		require.NotEmpty(t, history)
 		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -346,8 +346,8 @@ func TestMonitor_StatsByID(t *testing.T) {
 		responses := []*types.HttpResponse{}
 		responseTime := time.Duration(0)
 		for i := 0; i < 30; i++ {
-			r := generateResponse(time.Now().Add(-time.Duration(i) * time.Minute))
-			_ = m.Store.Add(ctx, "host", r)
+			r := generateResponse(time.Now().Add(-time.Duration(i) * time.Second))
+			_ = m.Store.AddResponse(ctx, "host", r)
 			responses = append(responses, r)
 			responseTime += r.Time
 		}
@@ -395,7 +395,7 @@ func TestMonitor_StatsByID(t *testing.T) {
 
 		responses := generateHours(10)
 		for _, r := range responses {
-			_ = m.Store.Add(ctx, "host", r)
+			_ = m.Store.AddResponse(ctx, "host", r)
 		}
 		require.NoError(t, store.Aggregate(ctx, m.Store))
 
@@ -438,10 +438,10 @@ func TestMonitor_StatsByID(t *testing.T) {
 
 		raw := generateDays(90)
 		for _, r := range raw {
-			_ = m.Store.Add(ctx, "host", r)
+			_ = m.Store.AddResponse(ctx, "host", r)
 		}
 		require.NoError(t, store.Aggregate(ctx, m.Store))
-		history, err := m.Store.History(ctx, "host", -1)
+		history, err := m.Store.FindResponses(ctx, "host")
 		require.NoError(t, err)
 		require.Equal(t, 90, len(history))
 
@@ -488,14 +488,15 @@ func TestMonitor_StatsByID(t *testing.T) {
 
 		now := time.Now()
 		for i := 0; i < 45; i++ {
-			_ = m.Store.Add(ctx, "host", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
+			_ = m.Store.AddResponse(ctx, "host", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
 		}
 		for _, r := range generateDays(90) {
-			_ = m.Store.Add(ctx, "host", r)
+			_ = m.Store.AddResponse(ctx, "host", r)
 		}
 		require.NoError(t, store.Aggregate(ctx, m.Store))
-		history, err := m.Store.History(ctx, "host", 90)
+		history, err := m.Store.FindResponses(ctx, "host")
 		require.NoError(t, err)
+		history = history[len(history)-90:]
 		require.Equal(t, 90, len(history))
 
 		responseTime := time.Duration(0)
@@ -543,14 +544,15 @@ func TestMonitor_StatsByID(t *testing.T) {
 
 		now := time.Now()
 		for i := 0; i < 45; i++ {
-			_ = m.Store.Add(ctx, "host", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
+			_ = m.Store.AddResponse(ctx, "host", generateResponse(now.Add(-time.Duration(i)*time.Minute)))
 		}
 		for _, r := range generateDays(90) {
-			_ = m.Store.Add(ctx, "host", r)
+			_ = m.Store.AddResponse(ctx, "host", r)
 		}
 		require.NoError(t, store.Aggregate(ctx, m.Store))
-		history, err := m.Store.History(ctx, "host", 90)
+		history, err := m.Store.FindResponses(ctx, "host")
 		require.NoError(t, err)
+		history = history[len(history)-90:]
 		require.Equal(t, 90, len(history))
 
 		responseTime := time.Duration(0)

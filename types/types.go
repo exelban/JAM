@@ -61,3 +61,14 @@ type Aggregation struct {
 	Uptime       float64       `json:"uptime"`
 	TS           time.Time     `json:"timestamp"`
 }
+
+// Incident - host incident structure
+type Incident struct {
+	ID       int        `json:"id"`
+	Text     string     `json:"-"`
+	Start    string     `json:"-"`
+	End      string     `json:"-"`
+	Duration string     `json:"-"`
+	StartTS  time.Time  `json:"startTS"`
+	EndTS    *time.Time `json:"endTS,omitempty"`
+}

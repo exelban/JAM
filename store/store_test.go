@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"github.com/exelban/JAM/types"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -11,7 +12,7 @@ import (
 	"time"
 )
 
-func TestStore_Add(t *testing.T) {
+func TestStore_AddResponse(t *testing.T) {
 	ctx := context.Background()
 	list := map[string]func() Interface{
 		"memory": func() Interface {
@@ -36,20 +37,16 @@ func TestStore_Add(t *testing.T) {
 			s := f()
 			count := rand.Intn(100-30) + 30
 			for i := 0; i < count; i++ {
-				require.NoError(t, s.Add(ctx, "test", &types.HttpResponse{Code: i, Timestamp: now.Add(-time.Minute * time.Duration(i))}))
+				require.NoError(t, s.AddResponse(ctx, "test", &types.HttpResponse{Code: i, Timestamp: now.Add(-time.Minute * time.Duration(i))}))
 			}
-			h, err := s.History(ctx, "test", -1)
+			h, err := s.FindResponses(ctx, "test")
 			require.NoError(t, err)
 			require.Equal(t, count, len(h))
 		})
 	}
 }
 
-func TestStore_Keys(t *testing.T) {
-	// TODO
-}
-
-func TestStore_History(t *testing.T) {
+func TestStore_ResponseHistory(t *testing.T) {
 	ctx := context.Background()
 	list := map[string]func() Interface{
 		"memory": func() Interface {
@@ -78,11 +75,11 @@ func TestStore_History(t *testing.T) {
 			for i := 0; i < count; i++ {
 				go func(i int) {
 					defer wg.Done()
-					_ = s.Add(ctx, "test", &types.HttpResponse{Code: i, Timestamp: now.Add(-time.Minute * time.Duration(i))})
+					_ = s.AddResponse(ctx, "test", &types.HttpResponse{Code: i, Timestamp: now.Add(-time.Minute * time.Duration(i))})
 				}(i)
 			}
 			wg.Wait()
-			history, err := s.History(ctx, "test", -1)
+			history, err := s.FindResponses(ctx, "test")
 			require.NoError(t, err)
 			require.Equal(t, count, len(history))
 
@@ -95,14 +92,223 @@ func TestStore_History(t *testing.T) {
 	}
 }
 
-func TestStore_Delete(t *testing.T) {
-	// TODO
+func TestStore_DeleteResponse(t *testing.T) {
+	ctx := context.Background()
+	list := map[string]func() Interface{
+		"memory": func() Interface {
+			return NewMemory(ctx)
+		},
+		"bolt": func() Interface {
+			file, err := os.CreateTemp("", "test.db")
+			require.NoError(t, err)
+			defer os.RemoveAll(file.Name())
+
+			b, err := NewBolt(ctx, file.Name())
+			require.NoError(t, err)
+			require.NotNil(t, b)
+
+			return b
+		},
+	}
+	now := time.Now()
+
+	for name, f := range list {
+		t.Run(name, func(t *testing.T) {
+			s := f()
+			count := rand.Intn(100-30) + 30
+			for i := 0; i < count; i++ {
+				require.NoError(t, s.AddResponse(ctx, "test", &types.HttpResponse{Code: i, Timestamp: now.Add(-time.Minute * time.Duration(i))}))
+			}
+			responses, err := s.FindResponses(ctx, "test")
+			require.NoError(t, err)
+			require.Equal(t, count, len(responses))
+
+			t.Run("delete half of the responses", func(t *testing.T) {
+				half := count / 2
+				keys := make([]time.Time, 0)
+				for i := 0; i < half; i++ {
+					keys = append(keys, responses[i].Timestamp)
+				}
+				require.NoError(t, s.DeleteResponse(ctx, "test", keys))
+
+				responses, err = s.FindResponses(ctx, "test")
+				require.NoError(t, err)
+				require.Equal(t, count-half, len(responses))
+			})
+
+			t.Run("delete all responses", func(t *testing.T) {
+				keys := make([]time.Time, 0)
+				for i := 0; i < len(responses); i++ {
+					keys = append(keys, responses[i].Timestamp)
+				}
+				require.NoError(t, s.DeleteResponse(ctx, "test", keys))
+
+				responses, err = s.FindResponses(ctx, "test")
+				require.NoError(t, err)
+				require.Empty(t, responses)
+			})
+		})
+	}
+}
+
+func TestStore_Hosts(t *testing.T) {
+	ctx := context.Background()
+	list := map[string]func() Interface{
+		"memory": func() Interface {
+			return NewMemory(ctx)
+		},
+		"bolt": func() Interface {
+			file, err := os.CreateTemp("", "test.db")
+			require.NoError(t, err)
+			defer os.RemoveAll(file.Name())
+
+			b, err := NewBolt(ctx, file.Name())
+			require.NoError(t, err)
+			require.NotNil(t, b)
+
+			return b
+		},
+	}
+	now := time.Now()
+
+	for name, f := range list {
+		t.Run(name, func(t *testing.T) {
+			s := f()
+			count := rand.Intn(100-30) + 30
+			for i := 0; i < count; i++ {
+				hostID := fmt.Sprintf("host-%d", i)
+				require.NoError(t, s.AddResponse(ctx, hostID, &types.HttpResponse{Timestamp: now.Add(-time.Minute * time.Duration(i))}))
+			}
+			hosts, err := s.Hosts(ctx)
+			require.NoError(t, err)
+			require.Equal(t, count, len(hosts))
+		})
+	}
+}
+
+func TestStore_AddEvent(t *testing.T) {
+	ctx := context.Background()
+	list := map[string]func() Interface{
+		"memory": func() Interface {
+			return NewMemory(ctx)
+		},
+		"bolt": func() Interface {
+			file, err := os.CreateTemp("", "test.db")
+			require.NoError(t, err)
+			defer os.RemoveAll(file.Name())
+
+			b, err := NewBolt(ctx, file.Name())
+			require.NoError(t, err)
+			require.NotNil(t, b)
+
+			return b
+		},
+	}
+	now := time.Now()
+
+	for name, f := range list {
+		t.Run(name, func(t *testing.T) {
+			s := f()
+			count := rand.Intn(100-30) + 30
+			for i := 0; i < count; i++ {
+				require.NoError(t, s.AddIncident(ctx, "test", &types.Incident{
+					StartTS: now.Add(-time.Minute * time.Duration(i)),
+					EndTS:   &now,
+				}))
+				time.Sleep(time.Millisecond)
+			}
+			e, err := s.FindIncidents(ctx, "test", 0, 0)
+			require.NoError(t, err)
+			require.Equal(t, count, len(e))
+
+			eventToFinish := e[3]
+			require.NoError(t, s.EndIncident(ctx, "test", eventToFinish.ID, now))
+			e, err = s.FindIncidents(ctx, "test", -1, -1)
+			require.NoError(t, err)
+			require.NotNil(t, e[3].EndTS)
+			require.Equal(t, now.Unix(), e[3].EndTS.Unix())
+		})
+	}
+}
+
+func TestStore_FindEvents(t *testing.T) {
+	ctx := context.Background()
+	list := map[string]func() Interface{
+		"memory": func() Interface {
+			return NewMemory(ctx)
+		},
+		"bolt": func() Interface {
+			file, err := os.CreateTemp("", "test.db")
+			require.NoError(t, err)
+			defer os.RemoveAll(file.Name())
+
+			b, err := NewBolt(ctx, file.Name())
+			require.NoError(t, err)
+			require.NotNil(t, b)
+
+			return b
+		},
+	}
+	now := time.Now()
+
+	for name, f := range list {
+		t.Run(name, func(t *testing.T) {
+			s := f()
+			count := rand.Intn(100-30) + 30
+			for i := 0; i < count; i++ {
+				require.NoError(t, s.AddIncident(ctx, "test", &types.Incident{
+					StartTS: now.Add(-time.Minute * time.Duration(i)),
+					EndTS:   &now,
+				}))
+				time.Sleep(time.Millisecond)
+			}
+
+			t.Run("no skip and no limit", func(t *testing.T) {
+				events, err := s.FindIncidents(ctx, "test", 0, 0)
+				require.NoError(t, err)
+				require.Equal(t, count, len(events))
+				require.Equal(t, count, events[0].ID)
+				require.Equal(t, 1, events[len(events)-1].ID)
+			})
+
+			t.Run("no skip with limit", func(t *testing.T) {
+				events, err := s.FindIncidents(ctx, "test", 0, 10)
+				require.NoError(t, err)
+				require.Equal(t, 10, len(events))
+				require.Equal(t, count, events[0].ID)
+				require.Equal(t, count-9, events[len(events)-1].ID)
+			})
+
+			t.Run("with skip no limit", func(t *testing.T) {
+				events, err := s.FindIncidents(ctx, "test", 5, 0)
+				require.NoError(t, err)
+				require.Equal(t, count-5, len(events))
+				require.Equal(t, count-5, events[0].ID)
+				require.Equal(t, 1, events[len(events)-1].ID)
+			})
+
+			t.Run("with skip and limit", func(t *testing.T) {
+				limitedAndSkipped, err := s.FindIncidents(ctx, "test", 5, 3)
+				require.NoError(t, err)
+				require.Equal(t, 3, len(limitedAndSkipped))
+				require.Equal(t, count-5, limitedAndSkipped[0].ID)
+				require.Equal(t, count-7, limitedAndSkipped[len(limitedAndSkipped)-1].ID)
+			})
+
+			t.Run("get last event", func(t *testing.T) {
+				e, err := s.FindIncidents(ctx, "test", 0, 1)
+				require.NoError(t, err)
+				require.Len(t, e, 1)
+				require.Equal(t, count, e[0].ID)
+			})
+		})
+	}
 }
 
 func TestStore_aggregation(t *testing.T) {
 	t.Run("one day history", func(t *testing.T) {
 		ctx := context.Background()
-		s, err := New(ctx, nil)
+		s, err := New(ctx, "memory", nil)
 		require.NoError(t, err)
 		require.NotNil(t, s)
 
@@ -111,13 +317,13 @@ func TestStore_aggregation(t *testing.T) {
 
 		require.NoError(t, Aggregate(ctx, s))
 
-		history, err := s.History(ctx, "test", -1)
+		history, err := s.FindResponses(ctx, "test")
 		require.NoError(t, err)
 		require.Equal(t, today+1, len(history))
 	})
 	t.Run("random days history back", func(t *testing.T) {
 		ctx := context.Background()
-		s, err := New(ctx, nil)
+		s, err := New(ctx, "memory", nil)
 		require.NoError(t, err)
 		require.NotNil(t, s)
 
@@ -127,13 +333,13 @@ func TestStore_aggregation(t *testing.T) {
 
 		require.NoError(t, Aggregate(ctx, s))
 
-		history, err := s.History(ctx, "test", -1)
+		history, err := s.FindResponses(ctx, "test")
 		require.NoError(t, err)
 		require.Equal(t, today+days, len(history))
 	})
 	t.Run("uptime, status and responseTime type per day", func(t *testing.T) {
 		ctx := context.Background()
-		s, err := New(ctx, nil)
+		s, err := New(ctx, "memory", nil)
 		require.NoError(t, err)
 		require.NotNil(t, s)
 
@@ -141,7 +347,7 @@ func TestStore_aggregation(t *testing.T) {
 		start := time.Now().Add(-24 * time.Hour * time.Duration(daysNum)).Truncate(time.Hour * 24)
 		_ = GenerateHistory(s, start, "test")
 
-		history, err := s.History(ctx, "test", -1)
+		history, err := s.FindResponses(ctx, "test")
 		require.NoError(t, err)
 
 		days := make(map[time.Time][]*types.HttpResponse)
@@ -177,7 +383,7 @@ func TestStore_aggregation(t *testing.T) {
 
 		require.NoError(t, Aggregate(ctx, s))
 
-		history, err = s.History(ctx, "test", -1)
+		history, err = s.FindResponses(ctx, "test")
 		require.NoError(t, err)
 
 		for _, h := range history {

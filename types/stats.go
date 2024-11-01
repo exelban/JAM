@@ -52,18 +52,10 @@ type Stat struct {
 	Index int
 }
 
-// Event is a struct that contains the event ID, status, text, and timestamp.
-type Event struct {
-	ID        string
-	Status    StatusType
-	Text      string
-	Timestamp string
-}
-
 // Stats is a struct that contains the stats of all hosts.
 type Stats struct {
-	IsHost bool
-	Status StatusType
-	Hosts  []Stat
-	Events []Event
+	IsHost    bool
+	Status    StatusType
+	Hosts     []Stat
+	Incidents []*Incident
 }

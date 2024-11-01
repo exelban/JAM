@@ -145,6 +145,7 @@ func (a *app) run(ctx context.Context) error {
 				log.Printf("[ERROR] store close %v", err)
 			}
 
+			log.Print("[INFO] terminated")
 			return nil
 		}
 	}

@@ -21,18 +21,18 @@
     {{ if .IsHost }}
     Host is operational
     {{ else }}
-    All systems operational
+    All hosts operational
     {{ end }}
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
     {{ else if eq .Status "down" }}
     {{ if .IsHost }}
     Host is down
     {{ else }}
-    All systems are down
+    All hosts are down
     {{ end }}
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>
     {{ else if eq .Status "degraded" }}
-    Some systems are experiencing issues
+    Some hosts are experiencing issues
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 9v-1a3 3 0 0 1 6 0v1"/><path d="M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1 -10 0v-3a6 6 0 0 1 1 -3"/><path d="M3 13l4 0"/><path d="M17 13l4 0"/><path d="M12 20l0 -6"/><path d="M4 19l3.35 -2"/><path d="M20 19l-3.35 -2"/><path d="M4 7l3.75 2.4"/><path d="M20 7l-3.75 2.4"/></svg>
     {{ else }}
     Unknown status
@@ -172,22 +172,43 @@
       <h3>{{ (index .Hosts 0).Details.SSL.ExpireTS }}</h3>
     </div>
     {{ end }}
-<!--    <div class="panel">-->
-<!--      <div class="head"><div class="info"><p>Last outage was</p></div></div>-->
-<!--      {{ if (index .Hosts 0).Details.LastOutage }}-->
-<!--      <h2>{{ (index .Hosts 0).Details.LastOutage.Since }} ago</h2>-->
-<!--      <h3>for {{ (index .Hosts 0).Details.LastOutage.Duration }} | {{ (index .Hosts 0).Details.LastOutage.TS }}</h3>-->
-<!--      {{ else }}-->
-<!--      <h2>Never</h2>-->
-<!--      {{ end }}-->
-<!--    </div>-->
+    <div class="panel">
+      <div class="head"><div class="info"><p>Last outage was</p></div></div>
+      {{ if (index .Hosts 0).Details.LastOutage }}
+      <h2>{{ (index .Hosts 0).Details.LastOutage.Since }} ago</h2>
+      <h3>for {{ (index .Hosts 0).Details.LastOutage.Duration }} | {{ (index .Hosts 0).Details.LastOutage.TS }}</h3>
+      {{ else }}
+      <h2>Never</h2>
+      {{ end }}
+    </div>
   </section>
-
   <section>
     <div class="panel">
       <div class="head"><div class="info"><p>Average response time</p></div></div>
       <div class="block"><img src="/response-time/{{ (index .Hosts 0).ID }}"></div>
     </div>
+  </section>
+  {{ end }}
+
+  {{ if .Incidents }}
+  <br>
+  <div class="legend">Incident history</div>
+  <section>
+    {{ range $val := .Incidents }}
+    <div class="panel incident">
+      <div class="head">
+        <div class="info">
+          {{ if eq .End "" }}
+          <div class="icon status-down"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></div>
+          {{ else }}
+          <div class="icon status-degraded"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 9v-1a3 3 0 0 1 6 0v1"/><path d="M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1 -10 0v-3a6 6 0 0 1 1 -3"/><path d="M3 13l4 0"/><path d="M17 13l4 0"/><path d="M12 20l0 -6"/><path d="M4 19l3.35 -2"/><path d="M20 19l-3.35 -2"/><path d="M4 7l3.75 2.4"/><path d="M20 7l-3.75 2.4"/></svg></div>
+          {{ end }}
+          <h3>{{ .Text }}</h3>
+        </div>
+        <p class="ts">{{ .Start }}{{ if ne .End "" }} - {{ .End }}{{ end }}</p>
+      </div>
+    </div>
+    {{ end }}
   </section>
   {{ end }}
 </main>

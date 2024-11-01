@@ -11,10 +11,22 @@ import (
 )
 
 type Interface interface {
-	Add(ctx context.Context, id string, r *types.HttpResponse) error
-	Keys(ctx context.Context) ([]string, error)
-	History(ctx context.Context, id string, limit int) ([]*types.HttpResponse, error)
-	Delete(ctx context.Context, id string, keys []time.Time) error
+	// AddResponse adds a new response to the history of the given ID.
+	// DeleteResponse deletes the given keys from the history of the given ID.
+	// FindResponses returns the history of the given ID.
+	AddResponse(ctx context.Context, hostID string, r *types.HttpResponse) error
+	DeleteResponse(ctx context.Context, hostID string, keys []time.Time) error
+	FindResponses(ctx context.Context, hostID string) ([]*types.HttpResponse, error)
+
+	// Hosts returns a list of all hosts that has any responses in the store.
+	Hosts(ctx context.Context) ([]string, error)
+
+	// AddIncident puts a new incident to the store.
+	// EndIncident marks the incident as finished by setting the end time.
+	// FindIncidents returns the list of incidents for the ID.
+	AddIncident(ctx context.Context, hostID string, e *types.Incident) error
+	EndIncident(ctx context.Context, hostID string, eventID int, ts time.Time) error
+	FindIncidents(ctx context.Context, hostID string, skip, limit int) ([]*types.Incident, error)
 
 	Close() error
 }
@@ -22,19 +34,19 @@ type Interface interface {
 func New(ctx context.Context, typ string, cfg *types.Cfg) (Interface, error) {
 	var store Interface
 
-	dbPath := "./data"
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		if err := os.Mkdir(dbPath, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create data directory: %w", err)
-		}
-	}
-	dbFilePath := fmt.Sprintf("%s/%s", dbPath, "jam.db")
-
 	switch typ {
 	case "memory":
 		store = NewMemory(ctx)
 		log.Printf("[INFO] using memory storage")
 	default:
+		dbPath := "./data"
+		if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+			if err := os.Mkdir(dbPath, 0755); err != nil {
+				return nil, fmt.Errorf("failed to create data directory: %w", err)
+			}
+		}
+		dbFilePath := fmt.Sprintf("%s/%s", dbPath, "jam.db")
+
 		s, err := NewBolt(ctx, dbFilePath)
 		if err != nil {
 			return nil, err
@@ -72,19 +84,19 @@ func Aggregate(ctx context.Context, s Interface) error {
 	log.Printf("[INFO] aggregating data")
 	start := time.Now()
 
-	keys, err := s.Keys(ctx)
+	hosts, err := s.Hosts(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get keys: %w", err)
 	}
 
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	for _, key := range keys {
+	for _, hostID := range hosts {
 		days := make(map[time.Time][]*types.HttpResponse)
 
-		history, err := s.History(ctx, key, -1)
+		history, err := s.FindResponses(ctx, hostID)
 		if err != nil {
-			return fmt.Errorf("failed to get history for %s: %w", key, err)
+			return fmt.Errorf("failed to get history for %s: %w", hostID, err)
 		}
 
 		for _, r := range history {
@@ -107,10 +119,10 @@ func Aggregate(ctx context.Context, s Interface) error {
 				toDelete = append(toDelete, r.Timestamp)
 			}
 
-			if err := s.Delete(ctx, key, toDelete); err != nil {
+			if err := s.DeleteResponse(ctx, hostID, toDelete); err != nil {
 				return err
 			}
-			if err := s.Add(ctx, key, aggregation); err != nil {
+			if err := s.AddResponse(ctx, hostID, aggregation); err != nil {
 				return err
 			}
 		}
@@ -177,8 +189,8 @@ func GenerateHistory(s Interface, start time.Time, id string) int {
 		if r.Timestamp.After(day) {
 			today++
 		}
-		if err := s.Add(ctx, id, r); err != nil {
-			fmt.Printf("failed to add: %v\n", err)
+		if err := s.AddResponse(ctx, id, r); err != nil {
+			log.Printf("[ERROR] failed to add response: %v", err)
 		}
 	}
 

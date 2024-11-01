@@ -8,7 +8,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/wcharczuk/go-chart/v2 v2.1.2
 	go.etcd.io/bbolt v1.3.11
-	go.mongodb.org/mongo-driver v1.17.0
+	go.mongodb.org/mongo-driver v1.17.1
 	golang.org/x/sync v0.8.0
 	gopkg.in/yaml.v2 v2.4.0
 )

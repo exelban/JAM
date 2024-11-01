@@ -8,6 +8,7 @@ import (
 	"github.com/exelban/JAM/types"
 	bolt "go.etcd.io/bbolt"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -25,16 +26,13 @@ func NewBolt(ctx context.Context, path string) (*Bolt, error) {
 		conn: db,
 	}, nil
 }
-
-// Close closes the store.
 func (b *Bolt) Close() error {
 	return b.conn.Close()
 }
 
-// Add adds a new response to the history of the given ID.
-func (b *Bolt) Add(ctx context.Context, id string, r *types.HttpResponse) error {
-	err := b.conn.Update(func(tx *bolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte(id))
+func (b *Bolt) AddResponse(ctx context.Context, hostID string, r *types.HttpResponse) error {
+	return b.conn.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte(hostID))
 		if err != nil {
 			return err
 		}
@@ -42,36 +40,33 @@ func (b *Bolt) Add(ctx context.Context, id string, r *types.HttpResponse) error 
 		if err != nil {
 			return err
 		}
-		key := make([]byte, 8)
-		binary.LittleEndian.PutUint64(key, uint64(r.Timestamp.UTC().Unix()))
-		return bucket.Put(key, data)
-	})
-
-	return err
-}
-
-// Keys returns the keys of the store.
-func (b *Bolt) Keys(ctx context.Context) ([]string, error) {
-	keys := []string{}
-
-	return keys, b.conn.View(func(tx *bolt.Tx) error {
-		return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
-			keys = append(keys, string(name))
-			return nil
-		})
+		return bucket.Put(itob(int(r.Timestamp.UTC().Unix())), data)
 	})
 }
-
-// History returns the history of the given ID.
-func (b *Bolt) History(ctx context.Context, id string, limit int) ([]*types.HttpResponse, error) {
-	res := []*types.HttpResponse{}
-
-	err := b.conn.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(id))
+func (b *Bolt) DeleteResponse(ctx context.Context, hostID string, keys []time.Time) error {
+	return b.conn.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(hostID))
 		if bucket == nil {
 			return nil
 		}
 
+		for _, key := range keys {
+			if err := bucket.Delete(itob(int(key.UTC().Unix()))); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+func (b *Bolt) FindResponses(ctx context.Context, hostID string) ([]*types.HttpResponse, error) {
+	res := []*types.HttpResponse{}
+
+	err := b.conn.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(hostID))
+		if bucket == nil {
+			return nil
+		}
 		return bucket.ForEach(func(k, v []byte) error {
 			var r types.HttpResponse
 			if err := json.Unmarshal(v, &r); err != nil {
@@ -85,29 +80,107 @@ func (b *Bolt) History(ctx context.Context, id string, limit int) ([]*types.Http
 		return res[i].Timestamp.Before(res[j].Timestamp)
 	})
 
+	return res, err
+}
+
+func (b *Bolt) Hosts(ctx context.Context) ([]string, error) {
+	keys := []string{}
+
+	return keys, b.conn.View(func(tx *bolt.Tx) error {
+		return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+			if !strings.HasPrefix(string(name), "e-") {
+				keys = append(keys, string(name))
+			}
+			return nil
+		})
+	})
+}
+
+func (b *Bolt) AddIncident(ctx context.Context, hostID string, e *types.Incident) error {
+	return b.conn.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte(fmt.Sprintf("e-%s", hostID)))
+		if err != nil {
+			return err
+		}
+
+		eventID, _ := bucket.NextSequence()
+		e.ID = int(eventID)
+		data, err := json.Marshal(e)
+		if err != nil {
+			return err
+		}
+
+		return bucket.Put(itob(e.ID), data)
+	})
+}
+func (b *Bolt) EndIncident(ctx context.Context, hostID string, eventID int, ts time.Time) error {
+	return b.conn.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(fmt.Sprintf("e-%s", hostID)))
+		if bucket == nil {
+			return nil
+		}
+
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			if int(binary.BigEndian.Uint64(k)) != eventID {
+				continue
+			}
+			var e types.Incident
+			if err := json.Unmarshal(v, &e); err != nil {
+				return err
+			}
+
+			e.EndTS = &ts
+			data, err := json.Marshal(e)
+			if err != nil {
+				return err
+			}
+
+			if err := bucket.Put(k, data); err != nil {
+				return err
+			}
+
+			break
+		}
+
+		return nil
+	})
+}
+func (b *Bolt) FindIncidents(ctx context.Context, hostID string, skip, limit int) ([]*types.Incident, error) {
+	res := []*types.Incident{}
+	err := b.conn.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(fmt.Sprintf("e-%s", hostID)))
+		if bucket == nil {
+			return nil
+		}
+		return bucket.ForEach(func(k, v []byte) error {
+			var e types.Incident
+			if err := json.Unmarshal(v, &e); err != nil {
+				return err
+			}
+			res = append(res, &e)
+			return nil
+		})
+	})
+	for i, j := 0, len(res)-1; i < j; i, j = i+1, j-1 {
+		res[i], res[j] = res[j], res[i]
+	}
+
+	if skip > 0 {
+		if len(res) < skip {
+			return []*types.Incident{}, nil
+		}
+		res = res[skip:]
+	}
 	if limit > 0 && len(res) > limit {
-		res = res[len(res)-limit:]
+		res = res[:limit]
 	}
 
 	return res, err
 }
 
-// Delete deletes the given keys from the history of the given ID.
-func (b *Bolt) Delete(ctx context.Context, id string, keys []time.Time) error {
-	return b.conn.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(id))
-		if bucket == nil {
-			return nil
-		}
-
-		for _, key := range keys {
-			k := make([]byte, 8)
-			binary.LittleEndian.PutUint64(k, uint64(key.UTC().Unix()))
-			if err := bucket.Delete(k); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
+func itob(v int) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }

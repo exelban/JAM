@@ -112,14 +112,20 @@ func (m *Monitor) StatsByID(ctx context.Context, id string, dayReport bool) (*ty
 	step := *w.host.Interval
 	m.mu.RUnlock()
 
-	history, err := m.Store.History(ctx, id, -1)
+	history, err := m.Store.FindResponses(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}
 
+	incidents, err := m.Store.FindIncidents(ctx, id, -1, 30)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get incidents: %w", err)
+	}
+	processIncidents(incidents)
+
 	var details *types.Details
 	if !dayReport {
-		details = getDetails(history)
+		details = getDetails(history, incidents)
 	}
 
 	if !dayReport && len(history) > 90 {
@@ -140,7 +146,7 @@ func (m *Monitor) StatsByID(ctx context.Context, id string, dayReport bool) (*ty
 				ID:           w.host.ID,
 				Name:         w.host.Name,
 				Description:  w.host.Description,
-				Host:         w.host.URL,
+				Host:         w.host.SecureURL(),
 				Status:       status,
 				Uptime:       uptime,
 				ResponseTime: responseTime,
@@ -149,6 +155,7 @@ func (m *Monitor) StatsByID(ctx context.Context, id string, dayReport bool) (*ty
 				Index:        w.host.Index,
 			},
 		},
+		Incidents: incidents,
 	}
 	w.mu.RUnlock()
 
@@ -156,7 +163,7 @@ func (m *Monitor) StatsByID(ctx context.Context, id string, dayReport bool) (*ty
 }
 
 func (m *Monitor) ResponseTime(ctx context.Context, id string) ([]time.Time, []float64, error) {
-	history, err := m.Store.History(ctx, id, -1)
+	history, err := m.Store.FindResponses(ctx, id)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get history: %w", err)
 	}
@@ -199,7 +206,7 @@ func (m *Monitor) ResponseTime(ctx context.Context, id string) ([]time.Time, []f
 
 // genChart - generates the chart for the host.
 // genIntervals - generates the intervals for the chart: 90d - 60d - 30d.
-// genUptimeAndResponseTime - generates the uptime and response time for the host.
+// getDetails - generates the details for the host.
 // generateGroupStatus - generates the status for the group.
 func genChart(history []*types.HttpResponse, interval time.Duration, dayReport bool) (types.Chart, int, string) {
 	points := []*types.Point{}
@@ -248,12 +255,12 @@ func genChart(history []*types.HttpResponse, interval time.Duration, dayReport b
 		space = len(points) - len(history)
 	}
 	for i, r := range history {
-		format := "2006-01-02 15:04:05"
+		pointFormat := "2006-01-02 15:04:05"
 		if r.IsAggregated {
-			format = "2006-01-02"
+			pointFormat = "2006-01-02"
 		}
 		points[space+i] = &types.Point{
-			Timestamp: r.Timestamp.Format(format),
+			Timestamp: r.Timestamp.Format(pointFormat),
 			Status:    r.StatusType,
 			TS:        r.Timestamp,
 		}
@@ -319,15 +326,13 @@ func genIntervals(points []*types.Point) []string {
 	}
 	return intervals
 }
-func getDetails(responses []*types.HttpResponse) *types.Details {
+func getDetails(responses []*types.HttpResponse, incidents []*types.Incident) *types.Details {
 	d := &types.Details{}
 
 	last30DaysUp := 0
 	last30DaysCount := 0
 	uptime30Days := 0.0
 	responseTime30Days := time.Duration(0)
-	var lastOutageTS *time.Time
-	var lastOutageUpTS *time.Time
 
 	for _, r := range responses {
 		if r.Timestamp.After(time.Now().Add(-time.Hour * 24 * 30)) {
@@ -336,15 +341,6 @@ func getDetails(responses []*types.HttpResponse) *types.Details {
 				last30DaysUp++
 			}
 			responseTime30Days += r.Time
-		}
-		if r.StatusType == types.DOWN {
-			if lastOutageTS == nil {
-				lastOutageTS = &r.Timestamp
-			} else if lastOutageTS.Before(r.Timestamp) {
-				lastOutageTS = &r.Timestamp
-			}
-		} else if lastOutageTS != nil && lastOutageUpTS == nil {
-			lastOutageUpTS = &r.Timestamp
 		}
 	}
 
@@ -359,15 +355,16 @@ func getDetails(responses []*types.HttpResponse) *types.Details {
 	}
 	d.ResponseTime = formatDuration(responseTime30Days)
 
-	if lastOutageTS != nil {
-		d.LastOutage = &types.LastOutageDetails{
-			Since: formatDuration(time.Since(*lastOutageTS)),
-			TS:    lastOutageTS.Format("January 2, 2006 15:04:05"),
+	if len(incidents) > 0 {
+		lastIncident := incidents[0]
+		ts := lastIncident.StartTS
+		if lastIncident.EndTS != nil {
+			ts = *lastIncident.EndTS
 		}
-		if lastOutageUpTS != nil {
-			d.LastOutage.Duration = formatDuration(lastOutageUpTS.Sub(*lastOutageTS))
-		} else {
-			d.LastOutage.Duration = formatDuration(time.Since(*lastOutageTS))
+		d.LastOutage = &types.LastOutageDetails{
+			Since:    formatDuration(time.Since(ts)),
+			TS:       ts.Format("2006-01-02 15:04:05"),
+			Duration: lastIncident.Duration,
 		}
 	}
 
@@ -402,6 +399,7 @@ func generateGroupStatus(hosts *[]types.Stat, i *int) types.StatusType {
 			unknownHosts++
 		}
 	}
+
 	if upHosts == allHosts || unknownHosts > 0 && upHosts > 0 {
 		return types.UP
 	} else if downHosts == allHosts {
@@ -410,6 +408,23 @@ func generateGroupStatus(hosts *[]types.Stat, i *int) types.StatusType {
 		return types.DEGRADED
 	} else {
 		return types.Unknown
+	}
+}
+func processIncidents(list []*types.Incident) {
+	for i, e := range list {
+		list[i].Start = e.StartTS.Format("2006-01-02 15:04:05")
+		text := fmt.Sprintf("Host is down for %s!", formatDuration(time.Now().Sub(e.StartTS)))
+		if e.EndTS != nil {
+			duration := e.EndTS.Sub(e.StartTS)
+			list[i].Duration = formatDuration(duration)
+			format := "2006-01-02 15:04:05"
+			if duration < time.Hour*24 {
+				format = "15:04:05"
+			}
+			list[i].End = e.EndTS.Format(format)
+			text = fmt.Sprintf("Host was down for %s.", formatDuration(duration))
+		}
+		list[i].Text = text
 	}
 }
 

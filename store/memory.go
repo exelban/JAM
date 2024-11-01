@@ -9,36 +9,71 @@ import (
 )
 
 type Memory struct {
-	history map[string]map[time.Time]*types.HttpResponse
+	history   map[string]map[time.Time]*types.HttpResponse
+	incidents map[string][]*types.Incident
 	sync.RWMutex
 }
 
 func NewMemory(ctx context.Context) *Memory {
 	return &Memory{
-		history: make(map[string]map[time.Time]*types.HttpResponse),
+		history:   make(map[string]map[time.Time]*types.HttpResponse),
+		incidents: make(map[string][]*types.Incident),
 	}
 }
-
-// Close closes the store.
 func (m *Memory) Close() error {
 	return nil
 }
 
-// Add adds a new response to the history of the given ID.
-func (m *Memory) Add(ctx context.Context, id string, r *types.HttpResponse) error {
+func (m *Memory) AddResponse(ctx context.Context, hostID string, r *types.HttpResponse) error {
 	m.Lock()
 	defer m.Unlock()
 
-	if _, ok := m.history[id]; !ok {
-		m.history[id] = make(map[time.Time]*types.HttpResponse)
+	if _, ok := m.history[hostID]; !ok {
+		m.history[hostID] = make(map[time.Time]*types.HttpResponse)
 	}
 
-	m.history[id][r.Timestamp.UTC()] = r
+	m.history[hostID][r.Timestamp.UTC()] = r
 	return nil
 }
+func (m *Memory) DeleteResponse(ctx context.Context, hostID string, keys []time.Time) error {
+	m.Lock()
+	defer m.Unlock()
 
-// Keys returns the keys of the store.
-func (m *Memory) Keys(ctx context.Context) ([]string, error) {
+	if _, ok := m.history[hostID]; !ok {
+		return nil
+	}
+
+	for _, key := range keys {
+		for ts := range m.history[hostID] {
+			if ts == key.UTC() {
+				delete(m.history[hostID], ts)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+func (m *Memory) FindResponses(ctx context.Context, hostID string) ([]*types.HttpResponse, error) {
+	m.RLock()
+	defer m.RUnlock()
+
+	if _, ok := m.history[hostID]; !ok {
+		return []*types.HttpResponse{}, nil
+	}
+
+	res := make([]*types.HttpResponse, 0, len(m.history[hostID]))
+	for _, r := range m.history[hostID] {
+		res = append(res, r)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Timestamp.Before(res[j].Timestamp)
+	})
+
+	return res, nil
+}
+
+func (m *Memory) Hosts(ctx context.Context) ([]string, error) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -50,47 +85,62 @@ func (m *Memory) Keys(ctx context.Context) ([]string, error) {
 	return keys, nil
 }
 
-// History returns the history of the given ID.
-func (m *Memory) History(ctx context.Context, id string, limit int) ([]*types.HttpResponse, error) {
-	m.RLock()
-	defer m.RUnlock()
-
-	if _, ok := m.history[id]; !ok {
-		return []*types.HttpResponse{}, nil
-	}
-
-	res := make([]*types.HttpResponse, 0, len(m.history[id]))
-	for _, r := range m.history[id] {
-		res = append(res, r)
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].Timestamp.Before(res[j].Timestamp)
-	})
-
-	if limit > 0 && len(res) > limit {
-		res = res[len(res)-limit:]
-	}
-
-	return res, nil
-}
-
-// Delete deletes the given keys from the history of the given ID.
-func (m *Memory) Delete(ctx context.Context, id string, keys []time.Time) error {
+func (m *Memory) AddIncident(ctx context.Context, hostID string, e *types.Incident) error {
 	m.Lock()
 	defer m.Unlock()
 
-	if _, ok := m.history[id]; !ok {
+	if _, ok := m.incidents[hostID]; !ok {
+		m.incidents[hostID] = make([]*types.Incident, 0)
+	}
+
+	e.ID = len(m.incidents[hostID]) + 1
+	m.incidents[hostID] = append(m.incidents[hostID], e)
+
+	return nil
+}
+func (m *Memory) EndIncident(ctx context.Context, hostID string, eventID int, ts time.Time) error {
+	m.Lock()
+	defer m.Unlock()
+
+	if _, ok := m.incidents[hostID]; !ok {
 		return nil
 	}
 
-	for _, key := range keys {
-		for ts := range m.history[id] {
-			if ts == key.UTC() {
-				delete(m.history[id], ts)
-				break
-			}
+	for _, e := range m.incidents[hostID] {
+		if e.ID != eventID {
+			continue
 		}
+		e.EndTS = &ts
+		break
 	}
 
 	return nil
+}
+func (m *Memory) FindIncidents(ctx context.Context, hostID string, skip, limit int) ([]*types.Incident, error) {
+	m.RLock()
+	defer m.RUnlock()
+
+	if _, ok := m.incidents[hostID]; !ok {
+		return []*types.Incident{}, nil
+	}
+
+	res := make([]*types.Incident, 0, len(m.incidents[hostID]))
+	for _, e := range m.incidents[hostID] {
+		res = append(res, e)
+	}
+	for i, j := 0, len(res)-1; i < j; i, j = i+1, j-1 {
+		res[i], res[j] = res[j], res[i]
+	}
+
+	if skip > 0 {
+		if len(res) < skip {
+			return []*types.Incident{}, nil
+		}
+		res = res[skip:]
+	}
+	if limit > 0 && len(res) > limit {
+		res = res[:limit]
+	}
+
+	return res, nil
 }
