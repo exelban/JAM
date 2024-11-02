@@ -25,7 +25,6 @@ func (t *Templates) Run(ctx context.Context) error {
 	}
 
 	changeLog := make(map[string]chan bool)
-
 	if err := filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -43,30 +42,25 @@ func (t *Templates) Run(ctx context.Context) error {
 		return fmt.Errorf("walk: %w", err)
 	}
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				for _, ch := range changeLog {
-					close(ch)
-				}
-				log.Printf("[DEBUG] templates watcher stopped")
-				return
-			default:
-				for path, ch := range changeLog {
-					select {
-					case <-ch:
-						if err := t.loadTemplates(); err != nil {
-							log.Printf("[ERROR] load templates: %v", err)
-						} else {
-							log.Printf("[DEBUG] reloaded %s", path)
-						}
-					default:
+	for path, ch := range changeLog {
+		go func(path string, ch chan bool) {
+		loop:
+			for {
+				select {
+				case <-ch:
+					if err := t.loadTemplates(); err != nil {
+						log.Printf("[ERROR] load templates: %v", err)
+					} else {
+						log.Printf("[DEBUG] reloaded %s", path)
 					}
+				case <-ctx.Done():
+					close(ch)
+					log.Printf("[DEBUG] watch for %s stopped", path)
+					break loop
 				}
 			}
-		}
-	}()
+		}(path, ch)
+	}
 
 	return nil
 }
