@@ -96,3 +96,20 @@ func (h *Host) GetType() HostType {
 	}
 	return HttpType
 }
+
+// SecureURL - returns a secure url that can be used in logs or alerts. It will hide the password if present.
+func (h *Host) SecureURL() string {
+	url := h.URL
+	if strings.HasPrefix(url, "mongodb://") {
+		if strings.Contains(url, "@") {
+			parts := strings.Split(url, "@")
+			creds := strings.Split(parts[0], ":")
+			if len(creds) == 3 {
+				creds[2] = "*****"
+				url = strings.Join(creds, ":") + "@" + parts[1]
+			}
+		}
+		return url
+	}
+	return url
+}
