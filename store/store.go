@@ -52,7 +52,8 @@ func New(ctx context.Context, typ string, cfg *types.Cfg) (Interface, error) {
 			return nil, err
 		}
 		store = s
-		log.Printf("[INFO] using bolt storage")
+
+		log.Printf("[INFO] using bolt storage at %s", dbFilePath)
 	}
 
 	if err := Aggregate(ctx, store); err != nil {

@@ -38,11 +38,10 @@ type app struct {
 
 //go:embed templates/*
 var fs embed.FS
-
-const version = "v0.0.0"
+var version string
 
 func main() {
-	log.Printf("uptime %s", version)
+	fmt.Println(version)
 
 	var args arguments
 	p := flags.NewParser(&args, flags.Default)

@@ -3,7 +3,7 @@
 set -eu
 
 version="v0.0.2"
-latestOnly=false
+dev=false
 dockerOnly=false
 
 while [[ $# -gt 0 ]]; do
@@ -13,8 +13,9 @@ while [[ $# -gt 0 ]]; do
       shift
       shift
       ;;
-    -l|--latest)
-      latestOnly=true
+    -dev)
+      dev=true
+      version="dev"
       shift
       ;;
     -d|--docker)
@@ -42,20 +43,20 @@ build_windows() {
 }
 
 build_docker_hub() {
-  if [ "$latestOnly" = false ]; then
-    docker buildx build --push --platform=linux/amd64,linux/arm64 --tag=exelban/jam:"$version" .
+  if [ "$dev" = false ]; then
+  docker buildx build --build-arg VERSION="$version" --push --platform=linux/amd64,linux/arm64 --tag=exelban/jam:latest .
   fi
-  docker buildx build --push --platform=linux/amd64,linux/arm64 --tag=exelban/jam:latest .
+  docker buildx build --build-arg VERSION="$version" --push --platform=linux/amd64,linux/arm64 --tag=exelban/jam:"$version" .
 }
 build_github_registry() {
-  if [ "$latestOnly" = false ]; then
-    docker buildx build --push --platform=linux/amd64,linux/arm64 --tag=ghcr.io/exelban/jam:"$version" .
+  if [ "$dev" = false ]; then
+  docker buildx build --build-arg VERSION="$version" --push --platform=linux/amd64,linux/arm64 --tag=ghcr.io/exelban/jam:latest .
   fi
-  docker buildx build --push --platform=linux/amd64,linux/arm64 --tag=ghcr.io/exelban/jam:latest .
+  docker buildx build --build-arg VERSION="$version" --push --platform=linux/amd64,linux/arm64 --tag=ghcr.io/exelban/jam:"$version" .
 }
 
-if [ "$latestOnly" = true ]; then
-  printf "\033[32;1m%s\033[0m\n" "Building latest version only..."
+if [ "$dev" = true ]; then
+  printf "\033[32;1m%s\033[0m\n" "Building dev version..."
 else
   printf "\033[32;1m%s\033[0m\n" "Building version ${version}..."
 fi
