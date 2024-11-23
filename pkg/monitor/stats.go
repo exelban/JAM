@@ -432,7 +432,9 @@ func formatDuration(d time.Duration) string {
 	rounded := d.Round(time.Millisecond)
 	str := rounded.String()
 
-	if rounded > time.Hour {
+	if rounded > time.Hour*24 {
+		str = fmt.Sprintf("%dd", int(rounded.Hours()/24))
+	} else if rounded > time.Hour {
 		str = fmt.Sprintf("%dh", int(rounded.Hours()))
 	} else if rounded > time.Minute {
 		str = fmt.Sprintf("%dm", int(rounded.Minutes()))
