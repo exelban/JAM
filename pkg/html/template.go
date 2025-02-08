@@ -62,20 +62,30 @@ func (t *Templates) Run(ctx context.Context) error {
 		}(path, ch)
 	}
 
+	if t.Public == nil || t.NotFound == nil {
+		return fmt.Errorf("templates not loaded")
+	}
+
 	return nil
 }
 
 func (t *Templates) loadTemplates() error {
 	filesystem := t.FS
+	localFS := os.DirFS(".")
 	if t.Debug {
-		filesystem = os.DirFS(".")
+		if _, err := fs.Stat(localFS, "templates/common/public.html"); err == nil {
+			filesystem = localFS
+		}
 	}
+
 	templ, err := template.ParseFS(filesystem, "templates/common/*.html", "templates/*.html")
 	if err != nil {
 		return fmt.Errorf("parse files: %w", err)
 	}
+
 	t.Public = templ.Lookup("public.html")
 	t.NotFound = templ.Lookup("404.html")
+
 	return nil
 }
 
