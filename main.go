@@ -103,6 +103,7 @@ func create(ctx context.Context, args arguments) (*app, error) {
 				Debug: args.Debug,
 			},
 			Version: version,
+			UI:      &cfg.UI,
 		},
 		config: cfg,
 		store:  storage,

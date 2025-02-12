@@ -31,6 +31,11 @@ type Alerts struct {
 	ShutdownMessage       bool  `json:"shutdownMessage" yaml:"shutdownMessage"`
 }
 
+type UI struct {
+	Title   string `json:"title" yaml:"title"`     // web page title
+	HideURL bool   `json:"hideURL" yaml:"hideURL"` // allows to hide URL of the host in the UI
+}
+
 type Cfg struct {
 	MaxConn int `json:"maxConn" yaml:"maxConn,omitempty"`
 
@@ -44,6 +49,7 @@ type Cfg struct {
 	Conditions *Success          `json:"success" yaml:"success,omitempty"`
 	Headers    map[string]string `json:"headers" yaml:"headers,omitempty"`
 
+	UI        UI      `json:"ui" yaml:"ui"`
 	Alerts    Alerts  `json:"alerts" yaml:"alerts,omitempty"`
 	FileHosts []*Host `json:"hosts" yaml:"hosts"`
 	Hosts     []*Host `json:"-" yaml:"-"`

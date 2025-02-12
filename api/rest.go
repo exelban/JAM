@@ -15,6 +15,7 @@ import (
 type Rest struct {
 	Monitor   *monitor.Monitor
 	Templates *html.Templates
+	UI        *types.UI
 
 	Version string
 }
@@ -57,7 +58,15 @@ func (s *Rest) public(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.Templates.Public.Execute(w, stats); err != nil {
+	data := struct {
+		Data     *types.Stats
+		Settings *types.UI
+	}{
+		Data:     stats,
+		Settings: s.UI,
+	}
+
+	if err := s.Templates.Public.Execute(w, data); err != nil {
 		log.Printf("[ERROR] generate public html: %v", err)
 		http.Error(w, fmt.Sprintf("error generate public html: %v", err), http.StatusInternalServerError)
 	}

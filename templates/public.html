@@ -8,30 +8,30 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Status page">
 
-  <title>{{ if .IsHost }} {{ $el := (index .Hosts 0) }} {{ if $el.Name }}{{ $el.Name }}{{ else }}{{ $el.Host }}{{ end }} -{{ end }} Status page</title>
+  <title>{{ if .Data.IsHost }} {{ $el := (index .Data.Hosts 0) }} {{ if $el.Name }}{{ $el.Name }}{{ else }}{{ $el.Host }}{{ end }} -{{ else }}{{ if .Settings.Title }}{{ .Settings.Title }}- {{ end }}{{ end }} Status page</title>
 
   {{ template "style" . }}
 </head>
 <body>
 {{ $root := . }}
 
-<header class="container status-{{ .Status }}">
+<header class="container status-{{ .Data.Status }}">
   <section>
-    {{ if eq .Status "up" }}
-    {{ if .IsHost }}
+    {{ if eq .Data.Status "up" }}
+    {{ if .Data.IsHost }}
     Host is operational
     {{ else }}
     All hosts operational
     {{ end }}
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
-    {{ else if eq .Status "down" }}
-    {{ if .IsHost }}
+    {{ else if eq .Data.Status "down" }}
+    {{ if .Data.IsHost }}
     Host is down
     {{ else }}
     All hosts are down
     {{ end }}
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>
-    {{ else if eq .Status "degraded" }}
+    {{ else if eq .Data.Status "degraded" }}
     Some hosts are experiencing issues
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 9v-1a3 3 0 0 1 6 0v1"/><path d="M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1 -10 0v-3a6 6 0 0 1 1 -3"/><path d="M3 13l4 0"/><path d="M17 13l4 0"/><path d="M12 20l0 -6"/><path d="M4 19l3.35 -2"/><path d="M20 19l-3.35 -2"/><path d="M4 7l3.75 2.4"/><path d="M20 7l-3.75 2.4"/></svg>
     {{ else }}
@@ -43,11 +43,11 @@
 
 <main class="container">
   <div class="legend">
-    {{ if .IsHost }}
+    {{ if .Data.IsHost }}
     Uptime over the past&nbsp;
-    <span class="bp1000">{{ (index (index .Hosts 0).Chart.Intervals 0) }}</span>
-    <span class="bp800">{{ (index (index .Hosts 0).Chart.Intervals 1) }}</span>
-    <span class="bp600">{{ (index (index .Hosts 0).Chart.Intervals 2) }}</span>
+    <span class="bp1000">{{ (index (index .Data.Hosts 0).Chart.Intervals 0) }}</span>
+    <span class="bp800">{{ (index (index .Data.Hosts 0).Chart.Intervals 1) }}</span>
+    <span class="bp600">{{ (index (index .Data.Hosts 0).Chart.Intervals 2) }}</span>
     .&nbsp;
     <a href="/">Back to list</a>
     {{ else }}
@@ -56,18 +56,18 @@
   </div>
 
   <section>
-    {{ if .Hosts }}
-    {{ range $row := .Hosts }}
+    {{ if .Data.Hosts }}
+    {{ range $row := .Data.Hosts }}
     <div class="panel">
       <div class="head">
         {{ if .Host }}
         <div class="info">
-          {{ if $root.IsHost }}
+          {{ if $root.Data.IsHost }}
           {{ if .Name }}<p>{{ .Name }}</p>{{ else }}<p>{{ .Host }}</p>{{ end }}
           {{ else }}
           <a href="{{ .ID }}">{{ if .Name }}{{ .Name }}{{ else }}{{ .Host }}{{ end }}</a>
           {{ end }}
-          {{ if .Name }}<p>| {{ .Host }}</p>{{ end }}
+          {{ if .Name }}{{ if not $root.Settings.HideURL }}<p>| {{ .Host }}</p>{{ end }}{{ end }}
           {{ if .Description }}
           <span data-tooltip="{{ .Description }}">
             | <svg xmlns="http://www.w3.org/2000/svg" style="margin-top: 1px;" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z"/></svg>
@@ -101,13 +101,13 @@
             ago
           </p>
           <div class="spacer"></div>
-          {{ if $root.IsHost }}
+          {{ if $root.Data.IsHost }}
           <span data-tooltip="Average response time for selected time range">~{{ .ResponseTime }}</span>
           {{ else }}
           <p>{{ .Uptime }}% uptime</p>
           {{ end }}
           <div class="spacer"></div>
-          <p>{{ if $root.IsHost }}Now{{ else }}Today{{ end }}</p>
+          <p>{{ if $root.Data.IsHost }}Now{{ else }}Today{{ end }}</p>
         </div>
       </div>
 
@@ -118,7 +118,7 @@
           <div class="head">
             <div class="info">
               <a href="{{ .ID }}">{{ if .Name }}{{ .Name }}{{ else }}{{ .Host }}{{ end }}</a>
-              {{ if .Name }}<p>| {{ .Host }}{{ end }}
+              {{ if .Name }}{{ if not $root.Settings.HideURL }}<p>| {{ .Host }}</p>{{ end }}{{ end }}
             </div>
             <p class="status status-{{ .Status }}">{{ .Status }}</p>
           </div>
@@ -152,31 +152,31 @@
     {{ end }}
   </section>
 
-  {{ if .IsHost }}
+  {{ if .Data.IsHost }}
   <section class="details">
     <div class="panel">
       <div class="head"><div class="info"><p>Last 30 days</p></div></div>
       <div class="time">
-        <h2>{{ (index .Hosts 0).Details.Uptime }}%</h2>
-        <h2>{{ (index .Hosts 0).Details.ResponseTime }}</h2>
+        <h2>{{ (index .Data.Hosts 0).Details.Uptime }}%</h2>
+        <h2>{{ (index .Data.Hosts 0).Details.ResponseTime }}</h2>
       </div>
       <div class="time">
         <h3>Uptime</h3>
         <h3>Response time</h3>
       </div>
     </div>
-    {{ if (index .Hosts 0).Details.SSL }}
+    {{ if (index .Data.Hosts 0).Details.SSL }}
     <div class="panel">
       <div class="head"><div class="info"><p>SSL certificate expire in</p></div></div>
-      <h2>{{ (index .Hosts 0).Details.SSL.ExpireInDays }} days</h2>
-      <h3>{{ (index .Hosts 0).Details.SSL.ExpireTS }}</h3>
+      <h2>{{ (index .Data.Hosts 0).Details.SSL.ExpireInDays }} days</h2>
+      <h3>{{ (index .Data.Hosts 0).Details.SSL.ExpireTS }}</h3>
     </div>
     {{ end }}
     <div class="panel">
       <div class="head"><div class="info"><p>Last outage was</p></div></div>
-      {{ if (index .Hosts 0).Details.LastOutage }}
-      <h2>{{ (index .Hosts 0).Details.LastOutage.Since }} ago</h2>
-      <h3>for {{ (index .Hosts 0).Details.LastOutage.Duration }} | {{ (index .Hosts 0).Details.LastOutage.TS }}</h3>
+      {{ if (index .Data.Hosts 0).Details.LastOutage }}
+      <h2>{{ (index .Data.Hosts 0).Details.LastOutage.Since }} ago</h2>
+      <h3>for {{ (index .Data.Hosts 0).Details.LastOutage.Duration }} | {{ (index .Data.Hosts 0).Details.LastOutage.TS }}</h3>
       {{ else }}
       <h2>Never</h2>
       {{ end }}
@@ -185,16 +185,16 @@
   <section>
     <div class="panel">
       <div class="head"><div class="info"><p>Average response time</p></div></div>
-      <div class="block"><img src="/response-time/{{ (index .Hosts 0).ID }}"></div>
+      <div class="block"><img src="/response-time/{{ (index .Data.Hosts 0).ID }}"></div>
     </div>
   </section>
   {{ end }}
 
-  {{ if .Incidents }}
+  {{ if .Data.Incidents }}
   <br>
   <div class="legend">Incident history</div>
   <section>
-    {{ range $val := .Incidents }}
+    {{ range $val := .Data.Incidents }}
     <div class="panel incident">
       <div class="head">
         <div class="info">
