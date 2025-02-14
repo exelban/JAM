@@ -49,6 +49,18 @@ func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 		n.clients = append(n.clients, telegram)
 		log.Print("[INFO] Telegram notifications enabled")
 	}
+	if cfg.Alerts.SMTP != nil {
+		smtp := &SMTP{
+			Host:     cfg.Alerts.SMTP.Host,
+			Port:     cfg.Alerts.SMTP.Port,
+			Username: cfg.Alerts.SMTP.Username,
+			Password: cfg.Alerts.SMTP.Password,
+			From:     cfg.Alerts.SMTP.From,
+			To:       cfg.Alerts.SMTP.To,
+		}
+		n.clients = append(n.clients, smtp)
+		log.Print("[INFO] SMTP notifications enabled")
+	}
 
 	if *cfg.Alerts.InitializationMessage {
 		for _, client := range n.clients {

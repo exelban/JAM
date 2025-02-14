@@ -10,6 +10,7 @@ require (
 	go.etcd.io/bbolt v1.3.11
 	go.mongodb.org/mongo-driver v1.17.1
 	golang.org/x/sync v0.8.0
+	gopkg.in/mail.v2 v2.3.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -30,6 +31,7 @@ require (
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

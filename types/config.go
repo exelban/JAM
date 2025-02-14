@@ -23,9 +23,19 @@ type Telegram struct {
 	ChatIDs []string `json:"chatIDs" yaml:"chatIDs"`
 }
 
+type SMTP struct {
+	Host     string   `json:"host" yaml:"host"`
+	Port     int      `json:"port" yaml:"port"`
+	Username string   `json:"username" yaml:"username"`
+	Password string   `json:"password" yaml:"password"`
+	From     string   `json:"from" yaml:"from"`
+	To       []string `json:"to" yaml:"to"`
+}
+
 type Alerts struct {
 	Slack    *Slack    `json:"slack" yaml:"slack"`
 	Telegram *Telegram `json:"telegram" yaml:"telegram"`
+	SMTP     *SMTP     `json:"smtp" yaml:"smtp"`
 
 	InitializationMessage *bool `json:"initializationMessage" yaml:"initializationMessage"`
 	ShutdownMessage       bool  `json:"shutdownMessage" yaml:"shutdownMessage"`

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -70,7 +70,7 @@ func (t *Telegram) sendToChat(chatID, msg string) error {
 		return nil
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("read body: %w", err)
 	}

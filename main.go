@@ -22,6 +22,15 @@ type arguments struct {
 
 	StorageType string `long:"storage-type" env:"STORAGE_TYPE" default:"bolt" description:"storage type"`
 
+	SMTP struct {
+		Host     string   `long:"host" env:"HOST" description:"SMTP host"`
+		Port     int      `long:"port" env:"PORT" default:"25" description:"SMTP port"`
+		Username string   `long:"username" env:"USERNAME" description:"SMTP user"`
+		Password string   `long:"password" env:"PASSWORD" description:"SMTP password"`
+		From     string   `long:"from" env:"FROM" description:"SMTP sender email"`
+		To       []string `long:"to" env:"TO" description:"SMTP receiver email"`
+	} `group:"smtp" namespace:"smtp" env-namespace:"SMTP"`
+
 	Port  int  `long:"port" env:"PORT" default:"8822" description:"service rest port"`
 	Debug bool `long:"debug" env:"DEBUG" description:"debug mode"`
 }
@@ -38,7 +47,7 @@ type app struct {
 
 //go:embed templates/*
 var fs embed.FS
-var version string
+var version = "dev"
 
 func main() {
 	fmt.Println(version)
