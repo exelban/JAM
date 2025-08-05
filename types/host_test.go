@@ -2,8 +2,7 @@ package types
 
 import (
 	"crypto/md5"
-	"encoding/hex"
-	"fmt"
+	"encoding/base64"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -55,26 +54,28 @@ func TestHost_String(t *testing.T) {
 func TestHost_GenerateID(t *testing.T) {
 	url := "url"
 	group := "group"
-	hasher := md5.New()
-
-	hasher.Write([]byte(url))
-	hash := hex.EncodeToString(hasher.Sum(nil))
-
-	hasher.Reset()
-	hasher.Write([]byte(fmt.Sprintf("%s%s", url, group)))
-	groupHash := hex.EncodeToString(hasher.Sum(nil))
 
 	t.Run("url only", func(t *testing.T) {
 		h := Host{
 			URL: url,
 		}
-		require.Equal(t, hash, h.GenerateID())
+		hasher := md5.New()
+		hasher.Write([]byte(url))
+		hash := hasher.Sum(nil)
+		expected := base64.URLEncoding.EncodeToString(hash)[:6]
+		require.Equal(t, expected, h.GenerateID())
 	})
+
 	t.Run("url and group", func(t *testing.T) {
 		h := Host{
 			URL:   url,
 			Group: &group,
 		}
-		require.Equal(t, groupHash, h.GenerateID())
+		hasher := md5.New()
+		input := append([]byte(url), []byte(group)...)
+		hasher.Write(input)
+		hash := hasher.Sum(nil)
+		expected := base64.URLEncoding.EncodeToString(hash)[:6]
+		require.Equal(t, expected, h.GenerateID())
 	})
 }

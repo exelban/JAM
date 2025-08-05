@@ -86,8 +86,6 @@ func main() {
 }
 
 func create(ctx context.Context, args arguments) (*app, error) {
-	log.Printf("[DEBUG] %+v", args)
-
 	cfg, err := types.NewConfig(ctx, args.ConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("new config: %w", err)

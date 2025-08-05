@@ -89,7 +89,7 @@ func (w *watcher) validate(status bool) {
 		w.failureCount = 0
 		if w.host.SuccessThreshold == nil || w.successCount >= *w.host.SuccessThreshold {
 			newStatus := types.UP
-			if w.status != types.Unknown {
+			if w.status != types.Unknown && w.status != types.UP {
 				if err := w.notify.Set(w.host.Alerts, newStatus, w.host.String()); err != nil {
 					log.Print(err)
 				}
@@ -108,7 +108,7 @@ func (w *watcher) validate(status bool) {
 		w.successCount = 0
 		if w.host.FailureThreshold == nil || w.failureCount >= *w.host.FailureThreshold {
 			newStatus := types.DOWN
-			if w.status != types.Unknown {
+			if w.status != types.Unknown && w.status != types.DOWN {
 				if err := w.notify.Set(w.host.Alerts, newStatus, w.host.String()); err != nil {
 					log.Print(err)
 				}

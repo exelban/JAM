@@ -1,4 +1,4 @@
-FROM exelban/baseimage:golang-latest as build-app
+FROM exelban/baseimage:golang-latest AS build-app
 
 ARG VERSION
 
@@ -17,4 +17,4 @@ FROM exelban/baseimage:alpine-latest
 EXPOSE 8822
 WORKDIR /app
 COPY --from=build-app /app/bin/main /app/main
-ENTRYPOINT ./main
+ENTRYPOINT ["./main"]

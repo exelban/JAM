@@ -42,7 +42,11 @@ func (s *Server) Run(router http.Handler) error {
 		s.IdleTimeout = 60 * time.Second
 	}
 
-	log.Printf("[INFO] http rest server on %s:%d", s.Address, s.Port)
+	addr := "http://localhost"
+	if s.Address != "" {
+		addr = s.Address
+	}
+	log.Printf("[INFO] http rest server on %s:%d", addr, s.Port)
 
 	s.mu.Lock()
 	s.srv = &http.Server{
