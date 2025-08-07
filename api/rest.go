@@ -1,11 +1,17 @@
 package api
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/exelban/JAM/pkg/html"
 	"github.com/exelban/JAM/pkg/monitor"
 	"github.com/exelban/JAM/types"
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/css"
+	mhtml "github.com/tdewolff/minify/v2/html"
+	"github.com/tdewolff/minify/v2/js"
+	"github.com/tdewolff/minify/v2/svg"
 	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
 	"log"
@@ -18,9 +24,17 @@ type Rest struct {
 	UI        *types.UI
 
 	Version string
+
+	minify *minify.M
 }
 
 func (s *Rest) Router() *http.ServeMux {
+	s.minify = minify.New()
+	s.minify.AddFunc("text/html", mhtml.Minify)
+	s.minify.AddFunc("text/css", css.Minify)
+	s.minify.AddFunc("image/svg+xml", svg.Minify)
+	s.minify.AddFunc("application/javascript", js.Minify)
+
 	router := NewRouter(Recoverer, CORS, Healthz, Info("JAM", s.Version))
 
 	router.HandleFunc("GET /", s.public)
@@ -66,17 +80,41 @@ func (s *Rest) public(w http.ResponseWriter, r *http.Request) {
 		Settings: s.UI,
 	}
 
-	if err := s.Templates.Public.Execute(w, data); err != nil {
+	var buf bytes.Buffer
+	if err := s.Templates.Public.Execute(&buf, data); err != nil {
 		log.Printf("[ERROR] generate public html: %v", err)
 		http.Error(w, fmt.Sprintf("error generate public html: %v", err), http.StatusInternalServerError)
+		return
 	}
+
+	minified, err := s.minify.Bytes("text/html", buf.Bytes())
+	if err != nil {
+		log.Printf("[ERROR] minify public html: %v", err)
+		http.Error(w, fmt.Sprintf("error minify public html: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(minified)
 }
 
 func (s *Rest) notFound(w http.ResponseWriter, r *http.Request) {
-	if err := s.Templates.NotFound.Execute(w, nil); err != nil {
-		log.Printf("[ERROR] generate not found html: %v", err)
+	var buf bytes.Buffer
+	if err := s.Templates.NotFound.Execute(&buf, nil); err != nil {
+		log.Printf("[ERROR] generate public html: %v", err)
 		http.Error(w, fmt.Sprintf("error generate not found html: %v", err), http.StatusInternalServerError)
+		return
 	}
+
+	minified, err := s.minify.Bytes("text/html", buf.Bytes())
+	if err != nil {
+		log.Printf("[ERROR] minify not found html: %v", err)
+		http.Error(w, fmt.Sprintf("error minify not found html: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(minified)
 }
 
 func (s *Rest) static(w http.ResponseWriter, r *http.Request) {
