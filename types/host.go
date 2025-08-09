@@ -32,8 +32,8 @@ type Host struct {
 	TimeoutInterval *time.Duration `json:"timeout" yaml:"timeout,omitempty"`
 	InitialDelay    *time.Duration `json:"initialDelay" yaml:"initialDelay,omitempty"`
 
-	SuccessThreshold *int `json:"successThreshold,omitempty" yaml:"successThreshold,omitempty"`
-	FailureThreshold *int `json:"failureThreshold,omitempty" yaml:"failureThreshold,omitempty"`
+	SuccessThreshold int `json:"successThreshold,omitempty" yaml:"successThreshold,omitempty"`
+	FailureThreshold int `json:"failureThreshold,omitempty" yaml:"failureThreshold,omitempty"`
 
 	Conditions *Success          `json:"conditions,omitempty" yaml:"conditions,omitempty"`
 	Headers    map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`

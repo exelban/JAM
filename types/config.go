@@ -162,6 +162,12 @@ func (c *Cfg) Validate() error {
 	} else if len(c.Conditions.Code) == 0 {
 		c.Conditions.Code = []int{200, 201, 202, 203, 204, 205, 206, 207, 208}
 	}
+	if c.SuccessThreshold == 0 {
+		c.SuccessThreshold = 1
+	}
+	if c.FailureThreshold == 0 {
+		c.FailureThreshold = 2
+	}
 
 	for i, host := range c.FileHosts {
 		if host.URL == "" {
@@ -196,11 +202,11 @@ func (c *Cfg) Validate() error {
 			host.Conditions.Code = c.Conditions.Code
 		}
 
-		if host.SuccessThreshold == nil {
-			host.SuccessThreshold = &c.SuccessThreshold
+		if host.SuccessThreshold == 0 {
+			host.SuccessThreshold = c.SuccessThreshold
 		}
-		if host.FailureThreshold == nil {
-			host.FailureThreshold = &c.FailureThreshold
+		if host.FailureThreshold == 0 {
+			host.FailureThreshold = c.FailureThreshold
 		}
 
 		for key, value := range c.Headers {
