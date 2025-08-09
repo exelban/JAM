@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"github.com/exelban/JAM/pkg/dialer"
 	"github.com/exelban/JAM/pkg/notify"
 	"github.com/exelban/JAM/store"
@@ -72,22 +73,26 @@ func (w *watcher) check() {
 	w.mu.Lock()
 	resp.Status = w.host.Status(resp.Code, resp.Bytes)
 	w.lastCheck = time.Now()
-	w.validate(resp.Status)
+	w.validate(&resp)
 	resp.StatusType = w.status
 	if err := w.store.AddResponse(w.ctx, w.host.ID, &resp); err != nil {
 		log.Printf("[ERROR] save response to db %s: %s", w.host.String(), err)
 	}
 	w.mu.Unlock()
 
-	log.Printf("[DEBUG] %s: %s status (%d - %s)", w.host.String(), w.status, resp.Code, resp.Body)
+	debug := fmt.Sprintf("[DEBUG] %s: %s status", w.host.String(), w.status)
+	if w.status != types.UP {
+		debug += fmt.Sprintf(" (%d - %s)", resp.Code, resp.Body)
+	}
+	log.Println(debug)
 }
 
 // validate - set status based on response status and thresholds
-func (w *watcher) validate(status bool) {
-	if status { // host is up
+func (w *watcher) validate(resp *types.HttpResponse) {
+	if resp.Status { // host is up
 		w.successCount++
 		w.failureCount = 0
-		if w.host.SuccessThreshold == nil || w.successCount >= *w.host.SuccessThreshold {
+		if w.successCount >= w.host.SuccessThreshold {
 			newStatus := types.UP
 			if w.status != types.Unknown && w.status != types.UP {
 				if err := w.notify.Set(w.host.Alerts, newStatus, w.host.String()); err != nil {
@@ -95,8 +100,15 @@ func (w *watcher) validate(status bool) {
 				}
 
 				if w.incident != nil {
-					if err := w.store.EndIncident(w.ctx, w.host.ID, w.incident.ID, time.Now()); err != nil {
-						log.Printf("[ERROR] end incident in db %s: %s", w.host.String(), err)
+					incidentDuration := time.Since(w.incident.StartTS)
+					if incidentDuration > time.Second {
+						if err := w.store.EndIncident(w.ctx, w.host.ID, w.incident.ID, time.Now()); err != nil {
+							log.Printf("[ERROR] end incident in db %s: %s", w.host.String(), err)
+						}
+					} else {
+						if err := w.store.DeleteIncident(w.ctx, w.host.ID, w.incident.ID); err != nil {
+							log.Printf("[ERROR] delete incident in db %s: %s", w.host.String(), err)
+						}
 					}
 					w.incident = nil
 				}
@@ -106,14 +118,21 @@ func (w *watcher) validate(status bool) {
 	} else { // host is down
 		w.failureCount++
 		w.successCount = 0
-		if w.host.FailureThreshold == nil || w.failureCount >= *w.host.FailureThreshold {
+		if w.failureCount >= w.host.FailureThreshold {
 			newStatus := types.DOWN
 			if w.status != types.Unknown && w.status != types.DOWN {
 				if err := w.notify.Set(w.host.Alerts, newStatus, w.host.String()); err != nil {
 					log.Print(err)
 				}
 				if w.incident == nil {
-					w.incident = &types.Incident{StartTS: time.Now()}
+					w.incident = &types.Incident{
+						Details: types.IncidentDetails{
+							StatusCode: resp.Code,
+							Response:   resp.Body,
+							TS:         resp.Timestamp,
+						},
+						StartTS: time.Now(),
+					}
 					if err := w.store.AddIncident(w.ctx, w.host.ID, w.incident); err != nil {
 						log.Printf("[ERROR] save incident to db %s: %s", w.host.String(), err)
 					}
