@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptrace"
+	"strings"
 	"time"
 )
 
@@ -61,10 +62,26 @@ func (d *Dialer) httpCall(ctx context.Context, h *types.Host) (response types.Ht
 
 	startTime := time.Now()
 	resp, err := client.Do(req)
+	response.Time = time.Since(startTime)
 	if err != nil {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			response.Code = 522
+		} else if opErr, ok := err.(*net.OpError); ok {
+			if opErr.Op == "dial" {
+				response.Code = 523
+			} else if opErr.Op == "read" {
+				response.Code = 521
+			}
+		} else {
+			if err.Error() != "" && (strings.Contains(err.Error(), "refused") || strings.Contains(err.Error(), "unreachable")) {
+				response.Code = 523
+			} else {
+				response.Code = http.StatusServiceUnavailable
+			}
+		}
 		return
 	}
-	response.Time = time.Since(startTime)
+	defer resp.Body.Close()
 	response.Code = resp.StatusCode
 
 	if tlsState != nil && len(tlsState.PeerCertificates) > 0 {

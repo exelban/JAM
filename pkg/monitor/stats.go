@@ -6,6 +6,7 @@ import (
 	"github.com/exelban/JAM/store"
 	"github.com/exelban/JAM/types"
 	"math"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -422,9 +423,19 @@ func processIncidents(list []*types.Incident) {
 				format = "15:04:05"
 			}
 			list[i].End = e.EndTS.Format(format)
-			text = fmt.Sprintf("Host was down for %s.", formatDuration(duration))
+			text = fmt.Sprintf("Host was down for %s", formatDuration(duration))
 		}
 		list[i].Text = text
+		switch e.Details.StatusCode {
+		case 521:
+			list[i].Details.StatusText = "Web server is down"
+		case 522:
+			list[i].Details.StatusText = "Connection timed out"
+		case 523:
+			list[i].Details.StatusText = "Origin is unreachable"
+		default:
+			list[i].Details.StatusText = http.StatusText(e.Details.StatusCode)
+		}
 	}
 }
 
