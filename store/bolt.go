@@ -146,6 +146,24 @@ func (b *Bolt) EndIncident(ctx context.Context, hostID string, eventID int, ts t
 		return nil
 	})
 }
+func (b *Bolt) DeleteIncident(ctx context.Context, hostID string, eventID int) error {
+	return b.conn.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(fmt.Sprintf("e-%s", hostID)))
+		if bucket == nil {
+			return nil
+		}
+
+		c := bucket.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			if int(binary.BigEndian.Uint64(k)) != eventID {
+				continue
+			}
+			return bucket.Delete(k)
+		}
+
+		return nil
+	})
+}
 func (b *Bolt) FindIncidents(ctx context.Context, hostID string, skip, limit int) ([]*types.Incident, error) {
 	res := []*types.Incident{}
 	err := b.conn.View(func(tx *bolt.Tx) error {

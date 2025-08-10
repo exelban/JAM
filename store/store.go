@@ -23,9 +23,11 @@ type Interface interface {
 
 	// AddIncident puts a new incident to the store.
 	// EndIncident marks the incident as finished by setting the end time.
+	// DeleteIncident removes the incident from the store.
 	// FindIncidents returns the list of incidents for the ID.
 	AddIncident(ctx context.Context, hostID string, e *types.Incident) error
 	EndIncident(ctx context.Context, hostID string, eventID int, ts time.Time) error
+	DeleteIncident(ctx context.Context, hostID string, eventID int) error
 	FindIncidents(ctx context.Context, hostID string, skip, limit int) ([]*types.Incident, error)
 
 	Close() error

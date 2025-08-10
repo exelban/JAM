@@ -116,6 +116,23 @@ func (m *Memory) EndIncident(ctx context.Context, hostID string, eventID int, ts
 
 	return nil
 }
+func (m *Memory) DeleteIncident(ctx context.Context, hostID string, eventID int) error {
+	m.Lock()
+	defer m.Unlock()
+
+	if _, ok := m.incidents[hostID]; !ok {
+		return nil
+	}
+
+	for i, e := range m.incidents[hostID] {
+		if e.ID == eventID {
+			m.incidents[hostID] = append(m.incidents[hostID][:i], m.incidents[hostID][i+1:]...)
+			break
+		}
+	}
+
+	return nil
+}
 func (m *Memory) FindIncidents(ctx context.Context, hostID string, skip, limit int) ([]*types.Incident, error) {
 	m.RLock()
 	defer m.RUnlock()
