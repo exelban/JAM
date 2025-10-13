@@ -2,14 +2,15 @@ package dialer
 
 import (
 	"context"
-	"github.com/exelban/JAM/types"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/exelban/JAM/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewDialer(t *testing.T) {
@@ -36,7 +37,7 @@ func TestDialer_Dial(t *testing.T) {
 	t.Run("wrong url", func(t *testing.T) {
 		resp := dialer.Dial(ctx, &types.Host{})
 		require.False(t, resp.OK)
-		require.Equal(t, 0, resp.Code)
+		require.Equal(t, 503, resp.Code)
 		require.Empty(t, resp.Bytes)
 	})
 
@@ -70,7 +71,7 @@ func TestDialer_Dial(t *testing.T) {
 			TimeoutInterval: &timeout,
 		})
 		require.False(t, resp.OK)
-		require.Equal(t, 0, resp.Code)
+		require.Equal(t, 522, resp.Code)
 		require.Empty(t, resp.Bytes)
 	})
 }

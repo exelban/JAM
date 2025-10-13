@@ -5,11 +5,12 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/exelban/JAM/types"
-	bolt "go.etcd.io/bbolt"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/exelban/JAM/types"
+	bolt "go.etcd.io/bbolt"
 )
 
 type Bolt struct {

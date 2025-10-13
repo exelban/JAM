@@ -3,13 +3,14 @@ package dialer
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/exelban/JAM/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"strings"
-	"time"
 )
 
 // mongoCall makes a mongo request to the host

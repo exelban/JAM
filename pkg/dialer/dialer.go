@@ -2,6 +2,7 @@ package dialer
 
 import (
 	"context"
+
 	"github.com/exelban/JAM/types"
 )
 
@@ -17,7 +18,7 @@ func New(maxConn int) *Dialer {
 	}
 }
 
-// Dial - make a http request to the provided host
+// Dial - make http request to the provided host
 func (d *Dialer) Dial(ctx context.Context, h *types.Host) types.HttpResponse {
 	d.sem <- 1
 	defer func() {

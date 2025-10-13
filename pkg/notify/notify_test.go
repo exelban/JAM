@@ -3,10 +3,11 @@ package notify
 import (
 	"context"
 	"errors"
-	"github.com/exelban/JAM/types"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+
+	"github.com/exelban/JAM/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {

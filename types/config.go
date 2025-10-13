@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Slack struct {
@@ -226,8 +227,8 @@ func (c *Cfg) Validate() error {
 		if c.Hosts[i].Name != nil {
 			msg += fmt.Sprintf(", name=%s", *c.Hosts[i].Name)
 		}
-		log.Printf(fmt.Sprintf("%s, url=%s, type=%s, initialDelay=%s, interval=%s, timeout=%s, successCode=%v, successThreshold=%d, failureThreshold=%d, hidden=%v",
-			msg, c.Hosts[i].URL, c.Hosts[i].Type, c.Hosts[i].InitialDelay, c.Hosts[i].Interval, c.Hosts[i].TimeoutInterval, c.Hosts[i].Conditions.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold, c.Hosts[i].Hidden))
+		log.Printf("%s, url=%s, type=%s, initialDelay=%s, interval=%s, timeout=%s, successCode=%v, successThreshold=%d, failureThreshold=%d, hidden=%v",
+			msg, c.Hosts[i].URL, c.Hosts[i].Type, c.Hosts[i].InitialDelay, c.Hosts[i].Interval, c.Hosts[i].TimeoutInterval, c.Hosts[i].Conditions.Code, c.Hosts[i].SuccessThreshold, c.Hosts[i].FailureThreshold, c.Hosts[i].Hidden)
 	}
 
 	// remove hosts that are not in the config file
@@ -240,7 +241,7 @@ func (c *Cfg) Validate() error {
 			}
 		}
 		if !found {
-			log.Printf("[DEBUG] remove host id=%s: %s", c.Hosts[i].ID, c.Hosts[i].URL)
+			log.Printf("[WARN] remove host id=%s: %s", c.Hosts[i].ID, c.Hosts[i].URL)
 			c.Hosts = append(c.Hosts[:i], c.Hosts[i+1:]...)
 		}
 	}

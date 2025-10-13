@@ -3,13 +3,14 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"log"
+	"sync"
+	"time"
+
 	"github.com/exelban/JAM/pkg/dialer"
 	"github.com/exelban/JAM/pkg/notify"
 	"github.com/exelban/JAM/store"
 	"github.com/exelban/JAM/types"
-	"log"
-	"sync"
-	"time"
 )
 
 type watcher struct {
@@ -66,7 +67,7 @@ func (w *watcher) run(ctx context.Context) {
 	}
 }
 
-// check - call to the host and check host status
+// check - call the host and check host status
 func (w *watcher) check() {
 	resp := w.dialer.Dial(w.ctx, w.host)
 
@@ -80,7 +81,7 @@ func (w *watcher) check() {
 	}
 	w.mu.Unlock()
 
-	debug := fmt.Sprintf("[DEBUG] %s: %s status", w.host.String(), w.status)
+	debug := fmt.Sprintf("[DEBUG] %s (%s): %s status", w.host.String(), w.host.ID, w.status)
 	if w.status != types.UP {
 		debug += fmt.Sprintf(" (%d - %s)", resp.Code, resp.Body)
 	}

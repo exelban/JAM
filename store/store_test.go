@@ -3,13 +3,14 @@ package store
 import (
 	"context"
 	"fmt"
-	"github.com/exelban/JAM/types"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/exelban/JAM/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStore_AddResponse(t *testing.T) {

@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"io"
 	"net/http"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type Telegram struct {

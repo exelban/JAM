@@ -4,6 +4,11 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/exelban/JAM/api"
 	"github.com/exelban/JAM/pkg/html"
 	"github.com/exelban/JAM/pkg/monitor"
@@ -11,10 +16,6 @@ import (
 	"github.com/exelban/JAM/types"
 	"github.com/jessevdk/go-flags"
 	"github.com/pkgz/logg"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 type arguments struct {

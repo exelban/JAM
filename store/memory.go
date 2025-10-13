@@ -2,10 +2,11 @@ package store
 
 import (
 	"context"
-	"github.com/exelban/JAM/types"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/exelban/JAM/types"
 )
 
 type Memory struct {

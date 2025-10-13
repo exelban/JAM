@@ -3,11 +3,12 @@ package notify
 import (
 	"context"
 	"fmt"
-	"github.com/exelban/JAM/types"
 	"log"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/exelban/JAM/types"
 )
 
 //go:generate moq -out mock_test.go . notify
@@ -91,7 +92,11 @@ func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 }
 
 func (n *Notify) Set(clients []string, status types.StatusType, name string) error {
-	text := fmt.Sprintf("`%s` has a new status: %s", name, strings.ToUpper(string(status)))
+	icon := "❌"
+	if status == types.UP {
+		icon = "✅"
+	}
+	text := fmt.Sprintf("%s: `%s` has a new status: %s", icon, name, strings.ToUpper(string(status)))
 
 	n.mu.Lock()
 	defer n.mu.Unlock()

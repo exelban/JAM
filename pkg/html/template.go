@@ -24,6 +24,10 @@ func (t *Templates) Run(ctx context.Context) error {
 		return fmt.Errorf("load templates: %w", err)
 	}
 
+	if !t.Debug {
+		return nil
+	}
+
 	changeLog := make(map[string]chan bool)
 	if err := filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
 		if err != nil {

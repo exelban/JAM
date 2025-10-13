@@ -3,10 +3,11 @@ package types
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_NewConfig(t *testing.T) {
@@ -228,10 +229,10 @@ func TestConfig_Validate(t *testing.T) {
 				}
 				require.NoError(t, cfg.Validate())
 				require.NotNil(t, cfg.Hosts[0].SuccessThreshold)
-				require.Equal(t, 0, *cfg.Hosts[0].SuccessThreshold)
+				require.Equal(t, 1, cfg.Hosts[0].SuccessThreshold)
 
 				require.NotNil(t, cfg.Hosts[0].FailureThreshold)
-				require.Equal(t, 0, *cfg.Hosts[0].FailureThreshold)
+				require.Equal(t, 2, cfg.Hosts[0].FailureThreshold)
 			})
 			t.Run("custom", func(t *testing.T) {
 				cfg := &Cfg{
@@ -245,9 +246,9 @@ func TestConfig_Validate(t *testing.T) {
 				}
 				require.NoError(t, cfg.Validate())
 				require.NotNil(t, cfg.Hosts[0].SuccessThreshold)
-				require.Equal(t, 500, *cfg.Hosts[0].SuccessThreshold)
+				require.Equal(t, 500, cfg.Hosts[0].SuccessThreshold)
 				require.NotNil(t, cfg.Hosts[0].FailureThreshold)
-				require.Equal(t, 501, *cfg.Hosts[0].FailureThreshold)
+				require.Equal(t, 501, cfg.Hosts[0].FailureThreshold)
 			})
 		})
 		t.Run("conditions", func(t *testing.T) {

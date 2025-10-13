@@ -3,14 +3,15 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"github.com/exelban/JAM/store"
-	"github.com/exelban/JAM/types"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/exelban/JAM/store"
+	"github.com/exelban/JAM/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMonitor_Run(t *testing.T) {
@@ -23,8 +24,6 @@ func TestMonitor_Run(t *testing.T) {
 
 	name := "host-0"
 	groupName := "group-0"
-	st := 2
-	ft := 3
 	idelay := time.Millisecond * 10
 	rd := time.Millisecond * 30
 	td := time.Millisecond * 100
@@ -34,8 +33,8 @@ func TestMonitor_Run(t *testing.T) {
 			{
 				Name:             &name,
 				URL:              ts.URL,
-				SuccessThreshold: &st,
-				FailureThreshold: &ft,
+				SuccessThreshold: 2,
+				FailureThreshold: 3,
 				InitialDelay:     &idelay,
 				Interval:         &rd,
 				TimeoutInterval:  &td,
@@ -47,8 +46,8 @@ func TestMonitor_Run(t *testing.T) {
 				Name:             &name,
 				URL:              ts.URL,
 				Group:            &groupName,
-				SuccessThreshold: &st,
-				FailureThreshold: &ft,
+				SuccessThreshold: 2,
+				FailureThreshold: 3,
 				InitialDelay:     &idelay,
 				Interval:         &rd,
 				TimeoutInterval:  &td,
@@ -122,8 +121,8 @@ func TestMonitor_Run(t *testing.T) {
 				newHost := &types.Host{
 					Name:             &name,
 					URL:              ts.URL,
-					SuccessThreshold: &st,
-					FailureThreshold: &ft,
+					SuccessThreshold: 2,
+					FailureThreshold: 3,
 					InitialDelay:     &idelay,
 					Interval:         &rd,
 					TimeoutInterval:  &td,
@@ -140,8 +139,8 @@ func TestMonitor_Run(t *testing.T) {
 				newHost := &types.Host{
 					Name:             &newName,
 					URL:              ts.URL,
-					SuccessThreshold: &st,
-					FailureThreshold: &ft,
+					SuccessThreshold: 2,
+					FailureThreshold: 3,
 					InitialDelay:     &idelay,
 					Interval:         &rd,
 					TimeoutInterval:  &td,
@@ -158,8 +157,8 @@ func TestMonitor_Run(t *testing.T) {
 					Name:             &name,
 					URL:              ts.URL,
 					Group:            &groupName,
-					SuccessThreshold: &st,
-					FailureThreshold: &ft,
+					SuccessThreshold: 2,
+					FailureThreshold: 3,
 					InitialDelay:     &idelay,
 					Interval:         &rd,
 					TimeoutInterval:  &td,
@@ -177,8 +176,8 @@ func TestMonitor_Run(t *testing.T) {
 				newHost := &types.Host{
 					Name:             &name,
 					URL:              fmt.Sprintf("%s/1", ts.URL),
-					SuccessThreshold: &st,
-					FailureThreshold: &ft,
+					SuccessThreshold: 2,
+					FailureThreshold: 3,
 					InitialDelay:     &idelay,
 					Interval:         &rd,
 					TimeoutInterval:  &td,
@@ -195,8 +194,8 @@ func TestMonitor_Run(t *testing.T) {
 				newHost := &types.Host{
 					Name:             &newName,
 					URL:              fmt.Sprintf("%s/2", ts.URL),
-					SuccessThreshold: &st,
-					FailureThreshold: &ft,
+					SuccessThreshold: 2,
+					FailureThreshold: 3,
 					InitialDelay:     &idelay,
 					Interval:         &rd,
 					TimeoutInterval:  &td,
@@ -214,8 +213,8 @@ func TestMonitor_Run(t *testing.T) {
 					Name:             &name,
 					URL:              ts.URL,
 					Group:            &newGroup,
-					SuccessThreshold: &st,
-					FailureThreshold: &ft,
+					SuccessThreshold: 2,
+					FailureThreshold: 3,
 					InitialDelay:     &idelay,
 					Interval:         &rd,
 					TimeoutInterval:  &td,
@@ -233,8 +232,8 @@ func TestMonitor_Run(t *testing.T) {
 					Name:             &name,
 					URL:              ts.URL,
 					Group:            &newGroup,
-					SuccessThreshold: &st,
-					FailureThreshold: &ft,
+					SuccessThreshold: 2,
+					FailureThreshold: 3,
 					InitialDelay:     &idelay,
 					Interval:         &rd,
 					TimeoutInterval:  &td,

@@ -3,10 +3,11 @@ package notify
 import (
 	"crypto/tls"
 	"fmt"
-	gomail "gopkg.in/mail.v2"
 	"log"
 	"sync"
 	"time"
+
+	gomail "gopkg.in/mail.v2"
 )
 
 type SMTP struct {

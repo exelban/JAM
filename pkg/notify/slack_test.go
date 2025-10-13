@@ -2,12 +2,13 @@ package notify
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestSlack_send(t *testing.T) {

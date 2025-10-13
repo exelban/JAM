@@ -2,11 +2,12 @@ package monitor
 
 import (
 	"context"
+	"sync"
+
 	"github.com/exelban/JAM/pkg/dialer"
 	"github.com/exelban/JAM/pkg/notify"
 	"github.com/exelban/JAM/store"
 	"github.com/exelban/JAM/types"
-	"sync"
 )
 
 // Monitor - main service which track the hosts liveness
@@ -23,7 +24,7 @@ type Monitor struct {
 	once sync.Once
 }
 
-// Run - run the monitor. Creates a jobs for each host in the separate threads
+// Run - run the monitor. Creates jobs for each host in the separate threads
 func (m *Monitor) Run(cfg *types.Cfg) error {
 	m.once.Do(func() {
 		m.watchers = make(map[string]*watcher)
@@ -59,7 +60,7 @@ func (m *Monitor) Run(cfg *types.Cfg) error {
 		}
 	}
 
-	// remove watchers which does not present in the config
+	// remove watchers that do not present in the config
 	m.mu.Lock()
 	for id, w := range m.watchers {
 		ok := false

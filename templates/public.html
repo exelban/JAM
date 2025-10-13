@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Status page">
 
-  <title>{{ if .Data.IsHost }} {{ $el := (index .Data.Hosts 0) }} {{ if $el.Name }}{{ $el.Name }}{{ else }}{{ $el.Host }}{{ end }} -{{ else }}{{ if .Settings.Title }}{{ .Settings.Title }}- {{ end }}{{ end }} Status page</title>
+  <title>{{ if .Data.IsHost }} {{ $el := (index .Data.Hosts 0) }} {{ if $el.Name }}{{ $el.Name }}{{ else }}{{ $el.Host }}{{ end }} -{{ else }}{{ if .Settings.Title }}{{ .Settings.Title }} - {{ end }}{{ end }} Status page</title>
 
   {{ template "style" . }}
 </head>

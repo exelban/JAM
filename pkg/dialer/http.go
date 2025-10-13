@@ -3,7 +3,6 @@ package dialer
 import (
 	"context"
 	"crypto/tls"
-	"github.com/exelban/JAM/types"
 	"io"
 	"log"
 	"net"
@@ -11,6 +10,8 @@ import (
 	"net/http/httptrace"
 	"strings"
 	"time"
+
+	"github.com/exelban/JAM/types"
 )
 
 // httpCall makes a HTTP request to the host

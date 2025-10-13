@@ -3,11 +3,12 @@ package store
 import (
 	"context"
 	"fmt"
-	"github.com/exelban/JAM/types"
 	"log"
 	"math/rand/v2"
 	"os"
 	"time"
+
+	"github.com/exelban/JAM/types"
 )
 
 type Interface interface {

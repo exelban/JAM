@@ -3,13 +3,14 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"github.com/exelban/JAM/store"
-	"github.com/exelban/JAM/types"
 	"math"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/exelban/JAM/store"
+	"github.com/exelban/JAM/types"
 )
 
 // Stats - returns the stats of all hosts grouped by groups

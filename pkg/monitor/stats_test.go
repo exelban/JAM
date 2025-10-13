@@ -2,12 +2,13 @@ package monitor
 
 import (
 	"context"
-	"github.com/exelban/JAM/store"
-	"github.com/exelban/JAM/types"
-	"github.com/stretchr/testify/require"
 	"math/rand/v2"
 	"testing"
 	"time"
+
+	"github.com/exelban/JAM/store"
+	"github.com/exelban/JAM/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMonitor_Stats(t *testing.T) {

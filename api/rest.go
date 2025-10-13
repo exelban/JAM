@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/exelban/JAM/pkg/html"
 	"github.com/exelban/JAM/pkg/monitor"
 	"github.com/exelban/JAM/types"
@@ -14,8 +17,6 @@ import (
 	"github.com/tdewolff/minify/v2/svg"
 	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
-	"log"
-	"net/http"
 )
 
 type Rest struct {

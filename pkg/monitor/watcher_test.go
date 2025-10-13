@@ -4,13 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/exelban/JAM/pkg/dialer"
 	"github.com/exelban/JAM/pkg/notify"
 	"github.com/exelban/JAM/store"
 	"github.com/exelban/JAM/types"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestWatcher_check(t *testing.T) {
@@ -18,8 +19,6 @@ func TestWatcher_check(t *testing.T) {
 	defer shutdown()
 	ctx := context.Background()
 
-	sn := 2
-	fn := 3
 	ri := 100 * time.Millisecond
 
 	w := &watcher{
@@ -31,8 +30,8 @@ func TestWatcher_check(t *testing.T) {
 			Conditions: &types.Success{
 				Code: []int{200},
 			},
-			SuccessThreshold: &sn,
-			FailureThreshold: &fn,
+			SuccessThreshold: 2,
+			FailureThreshold: 3,
 			Interval:         &ri,
 		},
 		ctx: ctx,
@@ -87,98 +86,129 @@ func TestWatcher_validate(t *testing.T) {
 			notify: &notify.Notify{},
 			store:  store.NewMemory(ctx),
 		}
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.UP, w.status)
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.DOWN, w.status)
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.UP, w.status)
 	})
 
 	t.Run("min thresholds", func(t *testing.T) {
-		sn := 2
-		fn := 2
-
 		w := &watcher{
 			notify: &notify.Notify{},
 			store:  store.NewMemory(ctx),
 			host: &types.Host{
 				ID:               id(),
-				SuccessThreshold: &sn,
-				FailureThreshold: &fn,
+				SuccessThreshold: 2,
+				FailureThreshold: 2,
 			},
 		}
 
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.Unknown, w.status)
 
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.Unknown, w.status)
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.DOWN, w.status)
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.DOWN, w.status)
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.UP, w.status)
 
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.UP, w.status)
 	})
 
 	t.Run("success", func(t *testing.T) {
-		sn := 3
-		fn := 2
-
 		w := &watcher{
 			notify: &notify.Notify{},
 			store:  store.NewMemory(ctx),
 			host: &types.Host{
 				ID:               id(),
-				SuccessThreshold: &sn,
-				FailureThreshold: &fn,
+				SuccessThreshold: 3,
+				FailureThreshold: 2,
 			},
 		}
 
 		for i := 0; i < 6; i++ {
-			w.validate(false)
+			w.validate(&types.HttpResponse{
+				Status: false,
+			})
 		}
-		w.validate(true)
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.DOWN, w.status)
 
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.UP, w.status)
 
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.UP, w.status)
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.DOWN, w.status)
 	})
 
 	t.Run("failure", func(t *testing.T) {
-		sn := 2
-		fn := 3
-
 		w := &watcher{
 			notify: &notify.Notify{},
 			store:  store.NewMemory(ctx),
 			host: &types.Host{
 				ID:               id(),
-				SuccessThreshold: &sn,
-				FailureThreshold: &fn,
+				SuccessThreshold: 2,
+				FailureThreshold: 3,
 			},
 		}
 
 		for i := 0; i < 6; i++ {
-			w.validate(true)
+			w.validate(&types.HttpResponse{
+				Status: true,
+			})
 		}
-		w.validate(false)
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.UP, w.status)
-		w.validate(false)
+		w.validate(&types.HttpResponse{
+			Status: false,
+		})
 		require.Equal(t, types.DOWN, w.status)
 
-		w.validate(true)
+		w.validate(&types.HttpResponse{
+			Status: true,
+		})
 		require.Equal(t, types.DOWN, w.status)
 	})
 }

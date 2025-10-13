@@ -3,8 +3,9 @@ package types
 import (
 	"crypto/md5"
 	"encoding/base64"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestHost_Status(t *testing.T) {
