@@ -30,6 +30,8 @@ func (d *Dialer) Dial(ctx context.Context, h *types.Host) types.HttpResponse {
 		switch h.Type {
 		case types.MongoType:
 			resp <- d.mongoCall(ctx, h)
+		case types.ICMPType:
+			resp <- d.icmpCall(ctx, h)
 		default:
 			resp <- d.httpCall(ctx, h)
 		}

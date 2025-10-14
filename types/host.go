@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,7 +20,7 @@ type Success struct {
 // Host - host structure
 type Host struct {
 	ID   string   `json:"id" yaml:"-"`
-	Type HostType `json:"type" yaml:"-"`
+	Type HostType `json:"type" yaml:"type"`
 
 	Name        *string `json:"name,omitempty" yaml:"name,omitempty"`
 	Description *string `json:"description,omitempty" yaml:"description,omitempty"`
@@ -91,9 +92,17 @@ func (h *Host) String() string {
 
 // GetType - return a host type based on url
 func (h *Host) GetType() HostType {
+	if h.Type != "" {
+		return h.Type
+	}
+
 	if strings.HasPrefix(h.URL, "mongodb://") {
 		return MongoType
 	}
+	if !strings.Contains(h.URL, "http://") && !strings.Contains(h.URL, "https://") && isIPv4(h.URL) {
+		return ICMPType
+	}
+
 	return HttpType
 }
 
@@ -112,4 +121,23 @@ func (h *Host) SecureURL() string {
 		return url
 	}
 	return url
+}
+
+func isIPv4(host string) bool {
+	parts := strings.Split(host, ".")
+
+	if len(parts) != 4 {
+		return false
+	}
+
+	for _, x := range parts {
+		i, err := strconv.Atoi(x)
+		if err != nil {
+			return false
+		}
+		if i < 0 || i > 255 {
+			return false
+		}
+	}
+	return true
 }

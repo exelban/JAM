@@ -17,6 +17,7 @@ const (
 
 	HttpType  HostType = "http"
 	MongoType HostType = "mongo"
+	ICMPType  HostType = "icmp"
 )
 
 // Tag - color tag structure for Service
