@@ -66,7 +66,7 @@ func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 	if *cfg.Alerts.InitializationMessage {
 		for _, client := range n.clients {
 			if err := client.send("I'm online"); err != nil {
-				return nil, fmt.Errorf("send up message: %w", err)
+				log.Printf("[ERROR] send initialization message: %s", err)
 			}
 		}
 	}
