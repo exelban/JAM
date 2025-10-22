@@ -33,7 +33,7 @@ type SMTP struct {
 	To       []string `json:"to" yaml:"to"`
 }
 
-type Alerts struct {
+type Notifications struct {
 	Slack    *Slack    `json:"slack" yaml:"slack"`
 	Telegram *Telegram `json:"telegram" yaml:"telegram"`
 	SMTP     *SMTP     `json:"smtp" yaml:"smtp"`
@@ -60,14 +60,17 @@ type Cfg struct {
 	Conditions *Success          `json:"success" yaml:"success,omitempty"`
 	Headers    map[string]string `json:"headers" yaml:"headers,omitempty"`
 
-	UI        UI      `json:"ui" yaml:"ui"`
-	Alerts    Alerts  `json:"alerts" yaml:"alerts,omitempty"`
-	FileHosts []*Host `json:"hosts" yaml:"hosts"`
-	Hosts     []*Host `json:"-" yaml:"-"`
+	UI            UI            `json:"ui" yaml:"ui"`
+	Notifications Notifications `json:"notifications" yaml:"notifications,omitempty"`
+	FileHosts     []*Host       `json:"hosts" yaml:"hosts"`
+	Hosts         []*Host       `json:"-" yaml:"-"`
 
 	path        string    `yaml:"-"`
 	initialized bool      `yaml:"-"`
 	FW          chan bool `yaml:"-"`
+
+	// DEPRECATED: use Notifications instead of Alerts
+	Alerts *Notifications `json:"alerts,omitempty" yaml:"alerts,omitempty"`
 }
 
 func NewConfig(ctx context.Context, path string) (*Cfg, error) {
@@ -168,6 +171,12 @@ func (c *Cfg) Validate() error {
 	}
 	if c.FailureThreshold == 0 {
 		c.FailureThreshold = 2
+	}
+
+	// DEPRECATED: migrate Alerts to Notifications
+	if c.Alerts != nil {
+		log.Print("[WARN] 'alerts' field is deprecated, please use 'notifications' instead")
+		c.Notifications = *c.Alerts
 	}
 
 	for i, host := range c.FileHosts {
