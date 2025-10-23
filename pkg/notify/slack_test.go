@@ -43,7 +43,7 @@ func TestSlack_send(t *testing.T) {
 		timeout: time.Millisecond * 10,
 	}
 
-	require.NoError(t, slack.send("test"))
-	require.Error(t, slack.send("error"))
-	require.Error(t, slack.send("timeout"))
+	require.NoError(t, slack.send("", "test"))
+	require.Error(t, slack.send("", "error"))
+	require.Error(t, slack.send("", "timeout"))
 }

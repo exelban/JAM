@@ -4,9 +4,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/exelban/JAM/types"
 	gomail "gopkg.in/mail.v2"
 )
 
@@ -56,7 +58,7 @@ func (s *SMTP) string() string {
 	return "smtp"
 }
 
-func (s *SMTP) send(str string) error {
+func (s *SMTP) send(subject, body string) error {
 	s.once.Do(func() {
 		s.dialer = gomail.NewDialer(s.Host, s.Port, s.Username, s.Password)
 		s.dialer.TLSConfig = &tls.Config{
@@ -81,11 +83,15 @@ func (s *SMTP) send(str string) error {
 		}
 	}
 
+	if subject == "" {
+		subject = "Status page: event triggered"
+	}
+
 	message := gomail.NewMessage()
 	message.SetHeader("From", s.From)
 	message.SetHeader("To", s.To...)
-	message.SetHeader("Subject", "Status page: event triggered")
-	message.SetBody("text/plain", str)
+	message.SetHeader("Subject", subject)
+	message.SetBody("text/html", body)
 
 	if err := gomail.Send(s.sendCloser, message); err != nil {
 		log.Printf("[ERROR] send email: %v", err)
@@ -95,4 +101,35 @@ func (s *SMTP) send(str string) error {
 	s.last = &now
 
 	return nil
+}
+
+func (s *SMTP) normalize(host *types.Host, status types.StatusType) (string, string) {
+	icon := "❌"
+	if status == types.UP {
+		icon = "✅"
+	}
+
+	details := fmt.Sprintf(`
+	<li><strong>Address:</strong> <a href="%s">%s</a></li>
+	<li><strong>Last check time:</strong> %s</li>
+	`, host.URL, host.URL, time.Now().Format(time.RFC1123))
+
+	name := host.URL
+	if host.Name != nil && *host.Name != "" {
+		name = *host.Name
+		details = fmt.Sprintf("<li><strong>Name:</strong> %s</li>%s", name, details)
+	}
+
+	subject := fmt.Sprintf("%s %s is %s", icon, name, strings.ToUpper(string(status)))
+
+	text := fmt.Sprintf(`
+<h2>%s %s has a new status: %s</h2>
+
+<h3>Details:</h3>
+<ul>%s</ul>
+
+<p>Check the status page for more details.</p>
+`, icon, name, strings.ToUpper(string(status)), details)
+
+	return subject, text
 }

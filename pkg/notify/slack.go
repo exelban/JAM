@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/exelban/JAM/types"
 )
 
 type Slack struct {
@@ -21,14 +23,14 @@ func (s *Slack) string() string {
 	return "slack"
 }
 
-func (s *Slack) send(str string) error {
+func (s *Slack) send(subject, body string) error {
 	b, _ := json.Marshal(struct {
 		Username string `json:"username,omitempty"`
 		Channel  string `json:"channel,omitempty"`
 		Text     string `json:"text,omitempty"`
 	}{
 		Channel: s.channel,
-		Text:    str,
+		Text:    body,
 	})
 
 	req, err := http.NewRequest(http.MethodPost, s.url, bytes.NewBuffer(b))
@@ -58,4 +60,21 @@ func (s *Slack) send(str string) error {
 	}
 
 	return nil
+}
+
+func (s *Slack) normalize(host *types.Host, status types.StatusType) (string, string) {
+	icon := "❌"
+	if status == types.UP {
+		icon = "✅"
+	}
+
+	name := host.URL
+	if host.Name != nil && *host.Name == "" {
+		name = *host.Name
+	}
+
+	text := fmt.Sprintf("%s: `%s` has a new status: %s", icon, host.String(), strings.ToUpper(string(status)))
+	subject := fmt.Sprintf("%s: %s is %s", icon, name, strings.ToUpper(string(status)))
+
+	return subject, text
 }

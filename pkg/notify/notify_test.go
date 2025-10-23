@@ -16,17 +16,17 @@ func TestNew(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, n.clients)
 	})
-	t.Run("init slack", func(t *testing.T) {
+	t.Run("init slack error", func(t *testing.T) {
 		n, err := New(context.Background(), &types.Cfg{
-			Alerts: types.Alerts{
+			Notifications: types.Notifications{
 				Slack: &types.Slack{
 					Channel: "test",
 					Token:   "test",
 				},
 			},
 		})
-		require.Error(t, err)
-		require.Nil(t, n)
+		require.NoError(t, err)
+		require.NotNil(t, n)
 	})
 }
 
@@ -35,8 +35,8 @@ func TestNotify_Set(t *testing.T) {
 		stringFunc: func() string {
 			return "mock"
 		},
-		sendFunc: func(str string) error {
-			if strings.Contains(str, "test_ok") {
+		sendFunc: func(subject, body string) error {
+			if strings.Contains(body, "test_ok") {
 				return nil
 			}
 			return errors.New("error")

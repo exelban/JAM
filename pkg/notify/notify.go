@@ -15,7 +15,8 @@ import (
 
 type notify interface {
 	string() string
-	send(str string) error
+	send(subject, body string) error
+	normalize(host *types.Host, status types.StatusType) (string, string)
 }
 
 type Notify struct {
@@ -27,45 +28,45 @@ type Notify struct {
 func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 	n := &Notify{}
 
-	if cfg.Alerts.InitializationMessage == nil {
+	if cfg.Notifications.InitializationMessage == nil {
 		t := true
-		cfg.Alerts.InitializationMessage = &t
+		cfg.Notifications.InitializationMessage = &t
 	}
 
-	if cfg.Alerts.Slack != nil {
+	if cfg.Notifications.Slack != nil {
 		slack := &Slack{
 			url:     "https://slack.com/api/chat.postMessage",
-			token:   cfg.Alerts.Slack.Token,
-			channel: cfg.Alerts.Slack.Channel,
+			token:   cfg.Notifications.Slack.Token,
+			channel: cfg.Notifications.Slack.Channel,
 			timeout: time.Second * 10,
 		}
 		n.clients = append(n.clients, slack)
 		log.Print("[INFO] Slack notifications enabled")
 	}
-	if cfg.Alerts.Telegram != nil {
+	if cfg.Notifications.Telegram != nil {
 		telegram := &Telegram{
-			token:   cfg.Alerts.Telegram.Token,
-			chatIDs: cfg.Alerts.Telegram.ChatIDs,
+			token:   cfg.Notifications.Telegram.Token,
+			chatIDs: cfg.Notifications.Telegram.ChatIDs,
 		}
 		n.clients = append(n.clients, telegram)
 		log.Print("[INFO] Telegram notifications enabled")
 	}
-	if cfg.Alerts.SMTP != nil {
+	if cfg.Notifications.SMTP != nil {
 		smtp := &SMTP{
-			Host:     cfg.Alerts.SMTP.Host,
-			Port:     cfg.Alerts.SMTP.Port,
-			Username: cfg.Alerts.SMTP.Username,
-			Password: cfg.Alerts.SMTP.Password,
-			From:     cfg.Alerts.SMTP.From,
-			To:       cfg.Alerts.SMTP.To,
+			Host:     cfg.Notifications.SMTP.Host,
+			Port:     cfg.Notifications.SMTP.Port,
+			Username: cfg.Notifications.SMTP.Username,
+			Password: cfg.Notifications.SMTP.Password,
+			From:     cfg.Notifications.SMTP.From,
+			To:       cfg.Notifications.SMTP.To,
 		}
 		n.clients = append(n.clients, smtp)
 		log.Print("[INFO] SMTP notifications enabled")
 	}
 
-	if *cfg.Alerts.InitializationMessage {
+	if *cfg.Notifications.InitializationMessage {
 		for _, client := range n.clients {
-			if err := client.send("I'm online"); err != nil {
+			if err := client.send("JAM status", "I'm online"); err != nil {
 				log.Printf("[ERROR] send initialization message: %s", err)
 			}
 		}
@@ -76,9 +77,9 @@ func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 		for {
 			select {
 			case <-ctx.Done():
-				if cfg.Alerts.ShutdownMessage {
+				if cfg.Notifications.ShutdownMessage {
 					for _, client := range n.clients {
-						if err := client.send("Going offline..."); err != nil {
+						if err := client.send("JAM status", "Going offline..."); err != nil {
 							log.Printf("[ERROR] send shutdown message: %s", err)
 						}
 					}
@@ -91,12 +92,8 @@ func New(ctx context.Context, cfg *types.Cfg) (*Notify, error) {
 	return n, nil
 }
 
-func (n *Notify) Set(clients []string, status types.StatusType, name string) error {
-	icon := "❌"
-	if status == types.UP {
-		icon = "✅"
-	}
-	text := fmt.Sprintf("%s: `%s` has a new status: %s", icon, name, strings.ToUpper(string(status)))
+func (n *Notify) Send(host *types.Host, status types.StatusType) error {
+	clients := host.Alerts
 
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -118,7 +115,45 @@ func (n *Notify) Set(clients []string, status types.StatusType, name string) err
 			continue
 		}
 
-		if err := c.send(text); err != nil {
+		subject, body := c.normalize(host, status)
+		if err := c.send(subject, body); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (n *Notify) Set(clients []string, status types.StatusType, name, addr string) error {
+	icon := "❌"
+	if status == types.UP {
+		icon = "✅"
+	}
+
+	text := fmt.Sprintf("%s: `%s (%s)` has a new status: %s", icon, name, addr, strings.ToUpper(string(status)))
+	subject := fmt.Sprintf("%s: %s is %s", icon, name, strings.ToUpper(string(status)))
+
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	for _, c := range n.clients {
+		send := false
+		if clients != nil && len(clients) > 0 {
+			for _, client := range clients {
+				if c.string() == client {
+					send = true
+					break
+				}
+			}
+		} else {
+			send = true
+		}
+
+		if !send {
+			continue
+		}
+
+		if err := c.send(subject, text); err != nil {
 			return err
 		}
 	}

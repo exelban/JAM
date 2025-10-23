@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/exelban/JAM/types"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -24,15 +26,32 @@ func (t *Telegram) string() string {
 	return "telegram"
 }
 
-func (t *Telegram) send(str string) error {
+func (t *Telegram) send(subject, body string) error {
 	g, _ := errgroup.WithContext(context.Background())
 	for _, chatID := range t.chatIDs {
 		id := chatID
 		g.Go(func() error {
-			return t.sendToChat(id, str)
+			return t.sendToChat(id, body)
 		})
 	}
 	return g.Wait()
+}
+
+func (t *Telegram) normalize(host *types.Host, status types.StatusType) (string, string) {
+	icon := "❌"
+	if status == types.UP {
+		icon = "✅"
+	}
+
+	name := host.URL
+	if host.Name != nil && *host.Name == "" {
+		name = *host.Name
+	}
+
+	text := fmt.Sprintf("%s: `%s` has a new status: %s", icon, host.String(), strings.ToUpper(string(status)))
+	subject := fmt.Sprintf("%s: %s is %s", icon, name, strings.ToUpper(string(status)))
+
+	return subject, text
 }
 
 func (t *Telegram) sendToChat(chatID, msg string) error {
