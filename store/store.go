@@ -18,6 +18,7 @@ type Interface interface {
 	AddResponse(ctx context.Context, hostID string, r *types.HttpResponse) error
 	DeleteResponse(ctx context.Context, hostID string, keys []time.Time) error
 	FindResponses(ctx context.Context, hostID string) ([]*types.HttpResponse, error)
+	LastResponse(ctx context.Context, hostID string) (*types.HttpResponse, error)
 
 	// Hosts returns a list of all hosts that has any responses in the store.
 	Hosts(ctx context.Context) ([]string, error)

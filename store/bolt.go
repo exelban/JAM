@@ -83,6 +83,29 @@ func (b *Bolt) FindResponses(ctx context.Context, hostID string) ([]*types.HttpR
 
 	return res, err
 }
+func (b *Bolt) LastResponse(ctx context.Context, hostID string) (*types.HttpResponse, error) {
+	var res *types.HttpResponse
+
+	err := b.conn.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(hostID))
+		if bucket == nil {
+			return nil
+		}
+		c := bucket.Cursor()
+		k, v := c.Last()
+		if k == nil {
+			return nil
+		}
+		var r types.HttpResponse
+		if err := json.Unmarshal(v, &r); err != nil {
+			return err
+		}
+		res = &r
+		return nil
+	})
+
+	return res, err
+}
 
 func (b *Bolt) Hosts(ctx context.Context) ([]string, error) {
 	keys := []string{}

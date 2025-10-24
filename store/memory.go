@@ -73,6 +73,23 @@ func (m *Memory) FindResponses(ctx context.Context, hostID string) ([]*types.Htt
 
 	return res, nil
 }
+func (m *Memory) LastResponse(ctx context.Context, hostID string) (*types.HttpResponse, error) {
+	m.RLock()
+	defer m.RUnlock()
+
+	if _, ok := m.history[hostID]; !ok {
+		return nil, nil
+	}
+
+	var last *types.HttpResponse
+	for _, r := range m.history[hostID] {
+		if last == nil || r.Timestamp.After(last.Timestamp) {
+			last = r
+		}
+	}
+
+	return last, nil
+}
 
 func (m *Memory) Hosts(ctx context.Context) ([]string, error) {
 	m.RLock()
